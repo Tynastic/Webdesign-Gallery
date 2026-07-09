@@ -2,13 +2,13 @@
 
 Copy-paste layouts for MediaWiki main pages and templates. No extensions required.
 
-**Live gallery:** https://YOURNAME.github.io/mediawiki-designs/
+**Live gallery:** https://tynastic.github.io/Webdesign-Gallery/
 
 ## Designs
 
 | Design | Preview | Files |
 |---|---|---|
-| Champlain Group — Intelligence Archive | [Preview](https://YOURNAME.github.io/mediawiki-designs/preview/champlain-main-page/) | [`designs/champlain-main-page/`](designs/champlain-main-page/) |
+| Champlain Group — Intelligence Archive | [Preview](https://tynastic.github.io/Webdesign-Gallery/) | [`designs/champlain-main-page/`](designs/champlain-main-page/) |
 
 ## How to use a design
 
