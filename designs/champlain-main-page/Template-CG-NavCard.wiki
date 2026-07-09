@@ -1,0 +1,16 @@
+<noinclude>
+'''Champlain Group navigation card.''' One card in the Main Page contents grid.
+
+Usage:
+<pre>{{CG-NavCard
+| link  = Orion Arm
+| title = Orion Arm
+| desc  = Charted space, sectors, and sovereign territories.
+| image = Orion Arm Card.jpg
+| alt   = Nebula over a charted star sector
+}}</pre>
+All parameters required except <code>alt</code> (falls back to the title).
+</noinclude><includeonly><div class="cg-card">
+<div class="cg-card-img">[[File:{{{image}}}|300px|link={{{link}}}|alt={{{alt|{{{title}}}}}}]]</div>
+<div class="cg-card-body">[[{{{link}}}|<span class="cg-card-title">{{{title}}}</span>]]<div class="cg-card-desc">{{{desc}}}</div></div>
+</div></includeonly>

@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Preview — Champlain Group Main Page</title>
+
+<!-- The exact same stylesheet people paste into MediaWiki:Common.css.
+     Single source of truth: edit that file, this preview updates too. -->
+<link rel="stylesheet" href="../../designs/champlain-main-page/MediaWiki-Common.css">
+
+<style>
+  /* Preview-only chrome. None of this is part of the design you copy. */
+  body { margin:0; background:#16332A; font-family:system-ui,-apple-system,"Segoe UI",sans-serif; }
+  .preview-bar {
+    background:#0F241D; color:#C9C3AE; border-bottom:1px solid #C9A227;
+    padding:10px 20px; font-size:.8rem; letter-spacing:.08em; text-transform:uppercase;
+    display:flex; justify-content:space-between; gap:16px; flex-wrap:wrap;
+  }
+  .preview-bar a { color:#E3C878; }
+  .preview-wrap { max-width:1040px; margin:0 auto; padding:28px 20px 60px; }
+
+  /* The hero image lives on the wiki, not in this repo — swap in a stand-in
+     so the preview isn't a broken box. Delete this rule if you commit a banner. */
+  .cg-hero {
+    background-image:
+      linear-gradient(to bottom, rgba(22,51,42,.25) 0%, rgba(22,51,42,.85) 70%, rgba(22,51,42,.97) 100%),
+      radial-gradient(circle at 30% 40%, #2C6B58 0%, #16332A 60%);
+  }
+  /* Placeholder tiles for the seven card images. */
+  .ph { height:130px; background:linear-gradient(135deg,#2C6B58,#16332A); display:block; }
+</style>
+</head>
+<body>
+
+<div class="preview-bar">
+  <span>Static preview — not a live wiki</span>
+  <span><a href="../../designs/champlain-main-page/">Get the files ↗</a></span>
+</div>
+
+<div class="preview-wrap">
+<div class="cg-page">
+
+  <div class="cg-hero">
+    <img class="cg-emblem" src="https://wiki.champlain.group/images/thumb/4/4c/Champlain_Color_1000.png/300px-Champlain_Color_1000.png" alt="Emblem of the Champlain Group: a golden sailing ship within a compass rose">
+    <h1 class="cg-title">The Champlain Group</h1>
+    <div class="cg-motto">Information is Our Arsenal</div>
+  </div>
+
+  <div class="cg-intro">
+    <p>The <b>Champlain Group</b> is the Orion Arm's foremost independent, open source, intelligence and risk assessment organization. Operating across the whole of the Orion Arm, we provide timely reporting, in-depth analysis, and curated historical records for clients ranging from sovereign governments and interstellar corporations to freelancers and local authorities.</p>
+  </div>
+
+  <div class="cg-notice">
+    <span class="cg-tag">Archive notice</span>
+    <span>Secure restoration in progress — some records remain sealed pending review. Restored files are added regularly.</span>
+  </div>
+
+  <div class="cg-section-head"><h2>Contents</h2></div>
+  <div class="cg-nav-grid">
+    <div class="cg-card"><a href="#" class="cg-card-img"><span class="ph"></span></a><div class="cg-card-body"><a href="#"><span class="cg-card-title">Orion Arm</span></a><div class="cg-card-desc">Charted space, sectors, and sovereign territories of the Arm.</div></div></div>
+    <div class="cg-card"><a href="#" class="cg-card-img"><span class="ph"></span></a><div class="cg-card-body"><a href="#"><span class="cg-card-title">Timeline</span></a><div class="cg-card-desc">The chronological record, from first colonization to 2289.</div></div></div>
+    <div class="cg-card"><a href="#" class="cg-card-img"><span class="ph"></span></a><div class="cg-card-body"><a href="#"><span class="cg-card-title">Astropolitics</span></a><div class="cg-card-desc">Power blocs, treaties, and flashpoints between the stars.</div></div></div>
+    <div class="cg-card"><a href="#" class="cg-card-img"><span class="ph"></span></a><div class="cg-card-body"><a href="#"><span class="cg-card-title">Organizations</span></a><div class="cg-card-desc">Governments, militaries, corporations, and syndicates on record.</div></div></div>
+    <div class="cg-card"><a href="#" class="cg-card-img"><span class="ph"></span></a><div class="cg-card-body"><a href="#"><span class="cg-card-title">Technology</span></a><div class="cg-card-desc">Spacelift, warships, and the machinery of the age.</div></div></div>
+    <div class="cg-card"><a href="#" class="cg-card-img"><span class="ph"></span></a><div class="cg-card-body"><a href="#"><span class="cg-card-title">Notable Figures</span></a><div class="cg-card-desc">Dossiers on the individuals shaping the Arm's history.</div></div></div>
+    <div class="cg-card"><a href="#" class="cg-card-img"><span class="ph"></span></a><div class="cg-card-body"><a href="#"><span class="cg-card-title">Conflicts</span></a><div class="cg-card-desc">Wars, skirmishes, and standoffs — documented and assessed.</div></div></div>
+  </div>
+
+  <div class="cg-section-head"><h2>Current Briefing</h2></div>
+  <div class="cg-briefing">
+
+    <div class="cg-brief-card">
+      <div class="cg-brief-img"><img src="https://wiki.champlain.group/images/thumb/5/57/Bulletin.jpeg/500px-Bulletin.jpeg" alt="Bulletin graphic: damaged section of the Fontclair International Starport"></div>
+      <div class="cg-brief-body">
+        <span class="cg-kicker">Latest bulletin — Acadian Expanse</span>
+        <h3>Shells hit Fontclair International Starport</h3>
+        <p>Fascist shells, rockets and drones have heavily damaged a section of the Fontclair International Starport, currently used as a forward operating base by the Acadian Armed Forces. Authorities have confirmed there was no threat to the integrity of the complex's spacelift.</p>
+        <div class="cg-brief-actions">
+          <a href="#" class="cg-btn">Read the full story</a>
+          <span class="cg-social"><a href="#">Bluesky</a> · <a href="#">X</a> · <a href="#">Instagram</a> · <a href="#">Threads</a></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="cg-brief-card">
+      <div class="cg-brief-img"><img src="https://wiki.champlain.group/images/thumb/9/9f/Konigsberg.png/500px-Konigsberg.png" alt="Data sheet and profile view of a Königsberg-class heavy cruiser"></div>
+      <div class="cg-brief-body">
+        <span class="cg-kicker">Highlighted article</span>
+        <h3>Königsberg-class Heavy Cruiser</h3>
+        <p>Ordered in 2277 as a counter to the Soviet <i>Retivyy</i>-II cruiser under the Kriegsmarine's Plan 89Z fleet modernization program — before developments across the Orion Arm's navies forced the design to change throughout its development.</p>
+        <div class="cg-brief-actions"><a href="#" class="cg-btn">Open the file</a></div>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+</div>
+</body>
+</html>

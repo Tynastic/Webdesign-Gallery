@@ -1,0 +1,224 @@
+/* ==========================================================
+   THE CHAMPLAIN GROUP — Main Page styles
+   Paste into:  MediaWiki:Common.css
+   All classes are prefixed "cg-" so nothing else is affected.
+   Palette preserved from the existing skin:
+     --cg-green       #1A3C31   page background green
+     --cg-panel       #1E4538   panel green
+     --cg-gold        #C9A227   brass gold (borders, accents)
+     --cg-gold-bright #E3C878   bright gold (links, headings) — AA on green
+     --cg-text        #EFEAD8   body text
+   ========================================================== */
+
+.cg-page {
+  --cg-green: #1A3C31;
+  --cg-panel: #1E4538;
+  --cg-panel-deep: #16332A;
+  --cg-gold: #C9A227;
+  --cg-gold-bright: #E3C878;
+  --cg-text: #EFEAD8;
+  --cg-text-dim: #C9C3AE;
+  color: var(--cg-text);
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+/* Links inside the main page: bright gold passes WCAG AA on the green,
+   unlike the default red link color. Underline appears on hover/focus. */
+.cg-page a { color: var(--cg-gold-bright); text-decoration: none; }
+.cg-page a:hover,
+.cg-page a:focus { text-decoration: underline; }
+.cg-page a:focus-visible { outline: 2px solid var(--cg-gold-bright); outline-offset: 2px; }
+.cg-page a.new { color: #E8A9A0; } /* softened red-link tint that still reads on green */
+
+/* ---------- HERO ---------- */
+.cg-hero {
+  position: relative;
+  border: 1px solid var(--cg-gold);
+  background: var(--cg-panel-deep);
+  /* Replace Hero_Nebula.jpg with your banner file's real path.
+     Fallback gradient keeps the hero presentable if the image is missing. */
+  background-image:
+    linear-gradient(to bottom, rgba(22,51,42,.25) 0%, rgba(22,51,42,.85) 70%, rgba(22,51,42,.97) 100%),
+    url(/images/Hero_Nebula.jpg);
+  background-size: cover;
+  background-position: center;
+  text-align: center;
+  padding: 40px 24px 28px;
+  margin-bottom: 24px;
+}
+.cg-hero img.cg-emblem { width: 110px; height: auto; margin: 0 auto 12px; }
+.cg-hero h1,
+.cg-hero .cg-title {
+  font-size: 2rem;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--cg-gold-bright);
+  border: none;
+  margin: 0;
+}
+.cg-hero .cg-motto {
+  font-style: italic;
+  color: var(--cg-text);
+  letter-spacing: .06em;
+  margin-top: 4px;
+}
+
+/* ---------- INTRO PANEL (text moved off the busy image) ---------- */
+.cg-intro {
+  background: var(--cg-panel);
+  border: 1px solid var(--cg-gold);
+  border-top: none;
+  padding: 18px 28px;
+  margin: -24px 0 24px;   /* tucks under the hero */
+  max-width: none;
+  text-align: center;
+}
+.cg-intro p { margin: 6px 0; }
+
+/* ---------- RESTORATION NOTICE ---------- */
+.cg-notice {
+  display: flex;
+  gap: 12px;
+  align-items: baseline;
+  border: 1px solid var(--cg-gold);
+  background: var(--cg-panel-deep);
+  padding: 8px 16px;
+  margin-bottom: 28px;
+  font-size: .85rem;
+  letter-spacing: .03em;
+}
+.cg-notice .cg-tag {
+  color: var(--cg-panel-deep);
+  background: var(--cg-gold);
+  font-weight: 700;
+  padding: 0 8px;
+  white-space: nowrap;
+  text-transform: uppercase;
+  font-size: .75rem;
+  letter-spacing: .1em;
+}
+
+/* ---------- SECTION HEADINGS ---------- */
+.cg-section-head {
+  border-bottom: 1px solid var(--cg-gold);
+  padding-bottom: 6px;
+  margin: 32px 0 20px;
+}
+.cg-section-head h2 {
+  color: var(--cg-gold-bright);
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  font-size: 1.25rem;
+  border: none;
+  margin: 0;
+}
+
+/* ---------- NAV CARD GRID (uniform, responsive) ---------- */
+.cg-nav-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 18px;
+}
+.cg-card {
+  background: var(--cg-panel);
+  border: 1px solid var(--cg-gold);
+  transition: transform .15s ease;
+}
+.cg-card:hover { transform: translateY(-3px); }
+.cg-card .cg-card-img img {
+  width: 100%;
+  height: 130px;          /* uniform crop — fixes uneven card sizes */
+  object-fit: cover;
+  display: block;
+}
+.cg-card .cg-card-body { padding: 12px 14px 14px; }
+.cg-card .cg-card-title {
+  display: block;
+  color: var(--cg-gold-bright);
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  font-weight: 700;
+  font-size: .95rem;
+}
+.cg-card .cg-card-desc {
+  color: var(--cg-text-dim);
+  font-size: .82rem;
+  margin-top: 4px;
+  line-height: 1.45;
+}
+
+/* ---------- BRIEFING (bulletins + highlighted article) ---------- */
+.cg-briefing {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 22px;
+}
+@media (max-width: 780px) {
+  .cg-briefing { grid-template-columns: 1fr; }
+}
+.cg-brief-card {
+  background: var(--cg-panel);
+  border: 1px solid var(--cg-gold);
+  display: flex;
+  flex-direction: column;
+}
+.cg-brief-card .cg-brief-img img {
+  width: 100%;
+  height: auto;
+  display: block;
+  border-bottom: 1px solid var(--cg-gold);
+}
+.cg-brief-card .cg-brief-body {
+  padding: 16px 18px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+}
+.cg-brief-card h3 {
+  color: var(--cg-gold-bright);
+  font-size: 1.1rem;
+  letter-spacing: .04em;
+  border: none;
+  margin: 0;
+}
+.cg-kicker {
+  font-size: .72rem;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--cg-gold);
+  font-weight: 700;
+}
+.cg-brief-actions {
+  margin-top: auto;
+  padding-top: 12px;
+  border-top: 1px dashed rgba(201,162,39,.45);
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+.cg-btn {
+  background: var(--cg-gold);
+  color: var(--cg-panel-deep) !important;
+  font-weight: 700;
+  font-size: .8rem;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  padding: 7px 14px;
+}
+.cg-btn:hover { background: var(--cg-gold-bright); text-decoration: none !important; }
+.cg-social {
+  margin-left: auto;
+  font-size: .75rem;
+  letter-spacing: .06em;
+  display: flex;
+  gap: 10px;
+}
+.cg-social a { color: var(--cg-text-dim); }
+
+/* ---------- MOTION & ACCESSIBILITY ---------- */
+@media (prefers-reduced-motion: reduce) {
+  .cg-card, .cg-card:hover { transition: none; transform: none; }
+}
