@@ -1,0 +1,41 @@
+# War Room via Cloudflare Tunnel: for a home PC / WSL, no router port forwarding,
+# no public IPv4 needed (works with DS-Lite), HTTPS by Cloudflare, home IP stays hidden.
+#
+#   docker compose -f docker-compose.tunnel.yml up -d --build
+#   docker compose -f docker-compose.tunnel.yml logs tunnel | grep trycloudflare   # quick-tunnel URL
+#
+# Default: a "quick tunnel" (no account, random https://….trycloudflare.com URL that changes on restart).
+# Stable URL on your own domain: create a tunnel in the Cloudflare dashboard (Zero Trust → Networks →
+# Tunnels), route a public hostname to http://app:1234, then set in .env:
+#   TUNNEL_TOKEN=<token from the dashboard>
+#   TUNNEL_ARGS=tunnel --no-autoupdate run
+services:
+  app:
+    build:
+      context: .
+      args:
+        APP_COMMIT: ${APP_COMMIT:-}
+    restart: unless-stopped
+    environment:
+      ADMIN_TOKEN: ${ADMIN_TOKEN:?set ADMIN_TOKEN in .env}
+      ROOM_TTL_DAYS: ${ROOM_TTL_DAYS:-90}
+      LIMIT_ROOMS_PER_HOUR: ${LIMIT_ROOMS_PER_HOUR:-10}
+      LIMIT_CONNECTIONS_PER_IP: ${LIMIT_CONNECTIONS_PER_IP:-20}
+    volumes:
+      - data:/data
+      - ./server/legal:/app/server/legal:ro
+    expose:
+      - '1234'
+
+  tunnel:
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    command: ${TUNNEL_ARGS:-tunnel --no-autoupdate --url http://app:1234}
+    environment:
+      TUNNEL_TOKEN: ${TUNNEL_TOKEN:-}
+    depends_on:
+      app:
+        condition: service_healthy
+
+volumes:
+  data:

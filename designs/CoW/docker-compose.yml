@@ -1,0 +1,45 @@
+# War Room behind Caddy (automatic HTTPS via Let's Encrypt). Configure in .env (see .env.example).
+#   docker compose up -d --build
+services:
+  app:
+    build:
+      context: .
+      args:
+        APP_COMMIT: ${APP_COMMIT:-}
+    restart: unless-stopped
+    environment:
+      ADMIN_TOKEN: ${ADMIN_TOKEN:?set ADMIN_TOKEN in .env}
+      ROOM_TTL_DAYS: ${ROOM_TTL_DAYS:-90}
+      LIMIT_ROOMS_PER_HOUR: ${LIMIT_ROOMS_PER_HOUR:-10}
+      LIMIT_CONNECTIONS_PER_IP: ${LIMIT_CONNECTIONS_PER_IP:-20}
+    volumes:
+      - data:/data
+      # Impressum / Datenschutz: edit the files on the host, no rebuild needed.
+      - ./server/legal:/app/server/legal:ro
+    expose:
+      - '1234'
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - '80:80'
+      - '443:443'
+      - '443:443/udp'
+    environment:
+      DOMAIN: ${DOMAIN:?set DOMAIN in .env}
+      # Optional closed beta: set both to protect the whole site with a login (see Caddyfile).
+      BETA_USER: ${BETA_USER:-}
+      BETA_PASSWORD_HASH: ${BETA_PASSWORD_HASH:-}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      app:
+        condition: service_healthy
+
+volumes:
+  data:
+  caddy_data:
+  caddy_config:

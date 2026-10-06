@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <style>
+        .heading {
+            font-size: 20pt;
+            font-family: 'Courier New', Courier, monospace;
+            font-weight: bold;
+            text-align: right;
+            background-color: rgba(255, 255, 255, 0.4);
+            color: #ffffff;
+            text-shadow: 0 0 5px black;
+            padding: 10px;
+        }
+
+        .main-container {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 10px;
+            background-color: #ffffff;
+            padding: 10px;
+            text-align: center;
+        }
+
+        .main-item {
+            background-color: rgba(0, 0, 0, 0.2);
+            padding: 3px;
+        }
+
+        .uni-row {
+            grid-column-start: 1;
+            grid-column-end: 5;
+        }
+
+        .sub-container {
+            display: grid;
+            grid-template-columns: repeat(6, minmax(0, 1fr));
+            gap: 10px;
+            background-color: #ffffff;
+            padding: 10px;
+            text-align: center;
+        }
+
+        .sub-item {
+            background-color: rgba(0, 0, 0, 0.4);
+            color: #ffffff;
+            padding: 3px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .heading-container {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+
+        .review-container {
+            display: grid;
+            gap: 10px;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            background-color: rgba(0, 0, 0, 0.1);
+            justify-content: center;
+            margin-left: auto;
+            margin-right: auto;
+            padding: 10px;
+        }
+
+        .review-img {
+            aspect-ratio: 2/3;
+            width: 200px;
+        }
+
+        .review-item {
+            display: grid;
+            grid-template-columns: 200px 100px;
+            align-items: center;
+            height: 300px;
+        }
+
+        .touzai-container {
+            display: grid;
+            grid-template-columns: repeat(10, minmax(0, 1fr));
+            background-color: rgba(0, 0, 0, 0.1);
+            margin-left: auto;
+            margin-right: auto;
+            row-gap: 5px;
+            padding-bottom: 10px;
+        }
+
+        .touzai-item {
+            aspect-ratio: 10/3;
+            width: 100%;
+            max-width: 800px;
+            display: block;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .footer {
+            text-align: right;
+            color: #ffffff;
+            position: fixed;
+            bottom: 0;
+            right: 0;
+            padding: 5px;
+        }
+    </style>
+</head>
+
+<!--Shelter url(https://pbs.twimg.com/media/FdLDGroacAIV__Z?format=jpg&name=large)-->
+
+<body>
+    <!--Rezensionen-->
+    <div class="main-container">
+        <div class="uni-row">
+            <div class="sub-container" style="background-image: url(https://pbs.twimg.com/media/E73XWC_UYAAtoKq?format=jpg&name=large); background-size: cover; background-position: center; ">
+
+                <div></div>
+                <div class="sub-item" style="grid-column-start: 2; grid-column-end: 4;">
+                    <b style="font-size: large;">Proxer-Redakteur</b>
+                </div>
+                <div></div>
+                <div></div>
+                <div></div>
+
+                <div class="sub-item">Rezensionen</div>
+                <div class="sub-item">News</div>
+                <div class="sub-item">Touzai</div>
+                <div></div>
+                <div></div>
+                <div class="sub-item">
+                    Schreiberling
+                </div>
+
+                <div><br></div>
+                <div></div>
+                <div></div>
+                <div></div>
+                <div class="sub-item">Aspiring Novelist</div>
+                <div class="sub-item">Worldbuilder</div>
+
+                <div></div>
+                <div class="sub-item">Literature</div>
+                <div></div>
+                <div></div>
+                <div></div>
+                <div></div>
+
+                <div></div>
+                <div class="sub-item">Movies</div>
+                <div></div>
+                <div></div>
+                <div></div>
+                <div></div>
+
+                <div><br></div>
+                <div class="sub-item">Games</div>
+                <div></div>
+                <div class="sub-item">Sci-Fi</div>
+                <div class="sub-item">Fantasy</div>
+                <div></div>
+
+                <div><br></div>
+                <div></div>
+                <div></div>
+                <div></div>
+                <div></div>
+                <div></div>
+
+                <div></div>
+                <div></div>
+                <div></div>
+                <div></div>
+                <div class="sub-item">
+                    Informatik Studium
+                </div>
+                <div class="sub-item">
+                    Geographie 👀
+                </div>
+
+                <div class="sub-item">History Enthusiast</div>
+                <div class="sub-item">PnP-Player</div>
+                <div></div>
+                <div></div>
+                <div></div>
+                <div></div>
+
+                <div class="sub-item" style="grid-column-start: 2; grid-column-end: 4;">cursed Dual-Wielder of <br>Deutsch & English</div>
+                <div></div>
+                <div class="sub-item"><b style="font-size: medium;">... and way more</b></div>
+            </div>
+        </div>
+        <div class="uni-row">
+            <div class="heading-container" style="background-image: url(https://pbs.twimg.com/media/Fz3nGEJaEAACFEI?format=jpg&name=4096x4096); background-attachment: fixed; background-size: contain; background-position: center;">
+                <div class="heading">
+                    <br><br><br><br><br>
+                    Rezensionen
+                </div>
+            </div>
+            <div class="review-container">
+                <a href="review?id=519#top" class="review-item">
+                    <div>
+                        <img class="review-img" alt="Isekai Shokudou" src="https://cdn.proxer.me/cover/17794.jpg"/>
+                    </div>
+                    <div style="margin-top: 150%;">
+                        <span>Restaurant to Another World</span>
+                    </div>
+                </a>
+                <a href="review?id=511#top" class="review-item">
+                    <div>
+                        <img class="review-img" alt="Bokutachi no Remake" src="https://cdn.proxer.me/cover/37432.jpg"/>
+                    </div>
+                    <div style="margin-top: 150%;">
+                        Remake Our Life!
+                    </div>
+                </a>
+                <a href="review?id=503#top" class="review-item">
+                    <div>
+                        <img class="review-img" alt="Tenchi Souzou Design-bu" src="https://cdn.proxer.me/cover/38249.jpg"/>
+                    </div>
+                    <div style="margin-top: 150%;">
+                        Heaven's Design Team
+                    </div>
+                </a>
+                <a href="review?id=493#top" class="review-item">
+                    <div>
+                        <img class="review-img" alt="Irozuku Sekai no Ashita kara" src="https://cdn.proxer.me/cover/22733.jpg"/>
+                    </div>
+                    <div style="margin-top: 150%;">
+                        Iroduku: The World in Colors
+                    </div>
+                </a>
+                <a href="review?id=485#top" class="review-item">
+                    <div>
+                        <img class="review-img" alt="Bubble" src="https://cdn.proxer.me/cover/53200.jpg"/>
+                    </div>
+                    <div style="margin-top: 150%;">
+                        Bubble
+                    </div>
+                </a>
+                <a href="review?id=476#top" class="review-item">
+                    <div>
+                        <img class="review-img" alt="Sword Art Online Progressive the Movie: Aria of a Starless Night" src="https://cdn.proxer.me/cover/41428.jpg"/>
+                    </div>
+                    <div style="margin-top: 150%;">
+                        SAO Progressive: Aria of a Starless Night
+                    </div>
+                </a>
+                <a href="review?id=468#top" class="review-item">
+                    <div>
+                        <img class="review-img" alt="Mahoutsukai no Yome" src="https://cdn.proxer.me/cover/18841.jpg"/>
+                    </div>
+                    <div style="margin-top: 150%;">
+                        The Ancient Magus' Bride
+                    </div>
+                </a>
+                <a href="review?id=458#top" class="review-item">
+                    <div>
+                        <img class="review-img" alt="The Summit of the Gods" src="https://cdn.proxer.me/cover/51593.jpg"/>
+                    </div>
+                    <div style="margin-top: 150%;">
+                        Le Sommet des Dieux
+                    </div>
+                </a>
+                <a href="review?id=450#top" class="review-item">
+                    <div>
+                        <img class="review-img" alt="RikeKoi" src="https://cdn.proxer.me/cover/28342.jpg"/>
+                    </div>
+                    <div style="margin-top: 150%;">
+                        Science Fell in Love, So I Tried to Prove It.
+                    </div>
+                </a>
+                <a href="review?id=442#top" class="review-item">
+                    <div>
+                        <img class="review-img" alt="Violet Evergarden the Movie" src="https://cdn.proxer.me/cover/24545.jpg"/>
+                    </div>
+                    <div style="margin-top: 150%;">
+                        Violet Evergarden the Movie
+                    </div>
+                </a>
+                <a href="review?id=438#top" class="review-item">
+                    <div>
+                        <img class="review-img" alt="Hibike! Euphonium" src="https://cdn.proxer.me/cover/11155.jpg"/>
+                    </div>
+                    <div style="margin-top: 150%;">
+                        Sound! Euphonium
+                    </div>
+                </a>
+                <a href="review?id=424#top" class="review-item">
+                    <div>
+                        <img class="review-img" alt="Runway de Waratte" src="https://cdn.proxer.me/cover/33511.jpg"/>
+                    </div>
+                    <div style="margin-top: 150%;">
+                        Smile Down the Runway
+                    </div>
+                </a>
+                <a href="review?id=414#top" class="review-item">
+                    <div>
+                        <img class="review-img" alt="Majou no Tabitabi" src="https://cdn.proxer.me/cover/34195.jpg"/>
+                    </div>
+                    <div style="margin-top: 150%;">
+                        The Journey of Elaina
+                    </div>
+                </a>
+                <a href="review?id=405#top" class="review-item">
+                    <div>
+                        <img class="review-img" alt="Hataraku Saibou!" src="https://cdn.proxer.me/cover/22471.jpg"/>
+                    </div>
+                    <div style="margin-top: 150%;">
+                        Cells at Work!
+                    </div>
+                </a>
+                <a href="forum/18/388481" class="review-item" style="background-color: aqua;">
+                    <div>
+                        <img class="review-img" alt="Sword Art Online Progressive" src="https://cdn.proxer.me/cover/6511.jpg"/>
+                    </div>
+                    <div style="margin-top: 150%;">
+                        MangaSnaps#02 SAO Progressive
+                    </div>
+                </a>
+                <a href="forum/18/388400" class="review-item" style="background-color: aqua;">
+                    <div>
+                        <img class="review-img" alt="Yuukoku no Moriarty" src="https://cdn.proxer.me/cover/23063.jpg"/>
+                    </div>
+                    <div style="margin-top: 150%;">
+                        MangaSnaps#01 Moriarty the Patriot
+                    </div>
+                </a>
+                <a href="review?id=395#top" class="review-item" style="background-color: aqua;">
+                    <div>
+                        <img class="review-img" alt="Honzuki no Gekokujou" src="https://cdn.proxer.me/cover/29706.jpg"/>
+                    </div>
+                    <div style="margin-top: 150%;">
+                        <span>Ascendance of a Bookworm</span>
+                    </div>
+                </a>
+            </div>
+        </div>
+
+        <div class="uni-row">
+            <div class="touzai-container" style="background-image: url(https://pbs.twimg.com/media/E8BY_syVkAUQwzG?format=jpg&name=large); background-attachment: fixed; background-size: contain; background-position: center;">
+                <div class="heading" style="grid-column-start: 1; grid-column-end: 5;">
+                    <br><br><br><br><br>
+                    Touzai
+                </div>
+                <a href="touzai?id=390358" style="grid-column-start: 2; grid-column-end: 10;">
+                    <img class="touzai-item" src="https://cdn.proxer.me/f/UWkr3grV"/>
+                </a>
+                <a href="touzai?id=390019" style="grid-column-start: 3; grid-column-end: 12;">
+                    <img class="touzai-item" src="https://cdn.proxer.me/f/RJdlhRlV"/>
+                </a>
+                <a href="touzai?id=389815" style="grid-column-start: 2; grid-column-end: 10;">
+                    <img class="touzai-item" src="https://cdn.proxer.me/f/9EDB8fc5"/>
+                </a>
+                <a href="touzai?id=389015" style="grid-column-start: 1; grid-column-end: 9;">
+                    <img class="touzai-item" src="https://cdn.proxer.me/f/nE0Iywyb"/>
+                </a>
+            </div>
+        </div>
+        <div class="main-item">
+            Box
+        </div>
+        <div class="main-item">
+            Box
+        </div>
+        <div class="main-item">
+            Box
+        </div>
+        <div class="main-item">
+            Box
+        </div>
+        <div class="main-item">
+            Box
+        </div>
+        <div class="main-item">
+            Box
+        </div>
+        <div class="main-item">
+            Box
+        </div>
+        <div class="main-item">
+            Box
+        </div>
+        <div class="main-item">
+            Box
+        </div>
+        <div class="main-item">
+            Box
+        </div>
+        <div class="uni-row">
+            <div class="main-container">
+                <div class="sub-item">
+                    Test
+                </div>
+                <div class="sub-item">
+                    Test
+                </div>
+                <div class="sub-item">
+                    Test
+                </div>
+                <div class="sub-item">
+                    Test
+                </div>
+            </div>
+        </div>
+        <div class="main-item">
+            Box
+        </div>
+        <div class="main-item">
+            Box
+        </div>
+        <div class="main-item">
+            Box
+        </div>
+        <div class="main-item">
+            Box
+        </div>
+        <div class="main-item">
+            Box
+        </div>
+    </div>
+
+    Test
+    <br>
+    <br>
+    <br>
+    <br>
+    <br>
+    <br>
+    <br>
+    <br>
+    <br>
+    <br>
+    <br>
+    <br>
+    <br>
+    <br>
+    <br>
+    <br>
+</body>

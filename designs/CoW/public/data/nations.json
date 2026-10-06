@@ -1,0 +1,434 @@
+{
+  "rgb(226,171,93)": {
+    "name": "Spain",
+    "short": "ESP",
+    "provinces": 72,
+    "de": "Spanien"
+  },
+  "rgb(178,165,108)": {
+    "name": "Soviet Union",
+    "short": "USSR",
+    "provinces": 267,
+    "de": "Sowjetunion"
+  },
+  "rgb(212,146,14)": {
+    "name": "Finland",
+    "short": "FIN",
+    "provinces": 21,
+    "de": "Finnland"
+  },
+  "rgb(104,126,86)": {
+    "name": "United Kingdom",
+    "short": "UK",
+    "provinces": 270,
+    "de": "Vereinigtes Königreich"
+  },
+  "rgb(102,126,134)": {
+    "name": "Tibet",
+    "short": "TIB",
+    "provinces": 41,
+    "de": "Tibet"
+  },
+  "rgb(192,170,145)": {
+    "name": "Sweden",
+    "short": "SWE",
+    "provinces": 52,
+    "de": "Schweden"
+  },
+  "rgb(108,144,147)": {
+    "name": "France",
+    "short": "FRA",
+    "provinces": 284,
+    "de": "Frankreich"
+  },
+  "rgb(176,150,83)": {
+    "name": "Portugal",
+    "short": "POR",
+    "provinces": 43,
+    "de": "Portugal"
+  },
+  "rgb(168,71,65)": {
+    "name": "Germany",
+    "short": "GER",
+    "provinces": 81,
+    "de": "Deutschland"
+  },
+  "rgb(116,143,166)": {
+    "name": "Norway",
+    "short": "NOR",
+    "provinces": 14,
+    "de": "Norwegen"
+  },
+  "rgb(118,136,95)": {
+    "name": "Poland",
+    "short": "POL",
+    "provinces": 44,
+    "de": "Polen"
+  },
+  "rgb(143,146,92)": {
+    "name": "Estonia",
+    "short": "EST",
+    "provinces": 4,
+    "de": "Estland"
+  },
+  "rgb(122,129,80)": {
+    "name": "Switzerland",
+    "short": "SUI",
+    "provinces": 8,
+    "de": "Schweiz"
+  },
+  "rgb(106,146,170)": {
+    "name": "Latvia",
+    "short": "LAT",
+    "provinces": 7,
+    "de": "Lettland"
+  },
+  "rgb(190,167,17)": {
+    "name": "Lithuania",
+    "short": "LIT",
+    "provinces": 4,
+    "de": "Litauen"
+  },
+  "rgb(204,134,73)": {
+    "name": "Ireland",
+    "short": "IRL",
+    "provinces": 8,
+    "de": "Irland"
+  },
+  "rgb(113,170,149)": {
+    "name": "Danzig",
+    "short": "DAN",
+    "provinces": 3,
+    "de": "Danzig"
+  },
+  "rgb(202,151,39)": {
+    "name": "Denmark",
+    "short": "DEN",
+    "provinces": 11,
+    "de": "Dänemark"
+  },
+  "rgb(110,139,164)": {
+    "name": "Mexico",
+    "short": "MEX",
+    "provinces": 44,
+    "de": "Mexiko"
+  },
+  "rgb(88,124,149)": {
+    "name": "Slovakia",
+    "short": "SVK",
+    "provinces": 5,
+    "de": "Slowakei"
+  },
+  "rgb(155,106,40)": {
+    "name": "Hungary",
+    "short": "HUN",
+    "provinces": 14,
+    "de": "Ungarn"
+  },
+  "rgb(200,101,27)": {
+    "name": "Netherlands",
+    "short": "NED",
+    "provinces": 75,
+    "de": "Niederlande"
+  },
+  "rgb(199,182,0)": {
+    "name": "Belgium",
+    "short": "BEL",
+    "provinces": 30,
+    "de": "Belgien"
+  },
+  "rgb(77,87,97)": {
+    "name": "Luxembourg",
+    "short": "LUX",
+    "provinces": 3,
+    "de": "Luxemburg"
+  },
+  "rgb(206,192,116)": {
+    "name": "Italy",
+    "short": "ITA",
+    "provinces": 111,
+    "de": "Italien"
+  },
+  "rgb(205,175,118)": {
+    "name": "Canada",
+    "short": "CAN",
+    "provinces": 82,
+    "de": "Kanada"
+  },
+  "rgb(146,161,90)": {
+    "name": "United States",
+    "short": "USA",
+    "provinces": 260,
+    "de": "Vereinigte Staaten"
+  },
+  "rgb(194,78,80)": {
+    "name": "Chile",
+    "short": "CHI",
+    "provinces": 11,
+    "de": "Chile"
+  },
+  "rgb(199,125,95)": {
+    "name": "Romania",
+    "short": "ROM",
+    "provinces": 42,
+    "de": "Rumänien"
+  },
+  "rgb(149,168,130)": {
+    "name": "Yugoslavia",
+    "short": "YUG",
+    "provinces": 48,
+    "de": "Jugoslawien"
+  },
+  "rgb(113,139,145)": {
+    "name": "Bulgaria",
+    "short": "BUL",
+    "provinces": 8,
+    "de": "Bulgarien"
+  },
+  "rgb(119,176,200)": {
+    "name": "Greece",
+    "short": "GRE",
+    "provinces": 23,
+    "de": "Griechenland"
+  },
+  "rgb(143,123,68)": {
+    "name": "Turkey",
+    "short": "TUR",
+    "provinces": 58,
+    "de": "Türkei"
+  },
+  "rgb(200,128,82)": {
+    "name": "Egypt",
+    "short": "EGY",
+    "provinces": 32,
+    "de": "Ägypten"
+  },
+  "rgb(166,151,83)": {
+    "name": "Thailand",
+    "short": "THA",
+    "provinces": 14,
+    "de": "Thailand"
+  },
+  "rgb(114,157,182)": {
+    "name": "Australia",
+    "short": "AUS",
+    "provinces": 97,
+    "de": "Australien"
+  },
+  "rgb(137,159,134)": {
+    "name": "Sinkiang",
+    "short": "SIN",
+    "provinces": 31,
+    "de": "Sinkiang"
+  },
+  "rgb(186,154,80)": {
+    "name": "British India",
+    "short": "IND",
+    "provinces": 108,
+    "de": "Britisch-Indien"
+  },
+  "rgb(117,139,166)": {
+    "name": "Afghanistan",
+    "short": "AFG",
+    "provinces": 14,
+    "de": "Afghanistan"
+  },
+  "rgb(103,156,140)": {
+    "name": "Iran",
+    "short": "IRN",
+    "provinces": 40,
+    "de": "Iran"
+  },
+  "rgb(196,101,87)": {
+    "name": "Japan",
+    "short": "JPN",
+    "provinces": 131,
+    "de": "Japan"
+  },
+  "rgb(192,97,82)": {
+    "name": "Venezuela",
+    "short": "VEN",
+    "provinces": 21,
+    "de": "Venezuela"
+  },
+  "rgb(167,135,79)": {
+    "name": "Peru",
+    "short": "PER",
+    "provinces": 24,
+    "de": "Peru"
+  },
+  "rgb(100,147,103)": {
+    "name": "China",
+    "short": "CHN",
+    "provinces": 107,
+    "de": "China"
+  },
+  "rgb(208,199,136)": {
+    "name": "Guatemala",
+    "short": "GUA",
+    "provinces": 3,
+    "de": "Guatemala"
+  },
+  "rgb(107,135,114)": {
+    "name": "Honduras",
+    "short": "HON",
+    "provinces": 3,
+    "de": "Honduras"
+  },
+  "rgb(223,107,80)": {
+    "name": "El Salvador",
+    "short": "SAL",
+    "provinces": 3,
+    "de": "El Salvador"
+  },
+  "rgb(233,208,100)": {
+    "name": "Costa Rica",
+    "short": "CRC",
+    "provinces": 3,
+    "de": "Costa Rica"
+  },
+  "rgb(131,68,29)": {
+    "name": "Nicaragua",
+    "short": "NIC",
+    "provinces": 3,
+    "de": "Nicaragua"
+  },
+  "rgb(176,178,121)": {
+    "name": "Panama",
+    "short": "PAN",
+    "provinces": 3,
+    "de": "Panama"
+  },
+  "rgb(229,187,95)": {
+    "name": "Cuba",
+    "short": "CUB",
+    "provinces": 9,
+    "de": "Kuba"
+  },
+  "rgb(76,111,79)": {
+    "name": "Dominican Republic",
+    "short": "DOM",
+    "provinces": 4,
+    "de": "Dominikanische Republik"
+  },
+  "rgb(100,164,126)": {
+    "name": "Haiti",
+    "short": "HAI",
+    "provinces": 3,
+    "de": "Haiti"
+  },
+  "rgb(203,192,90)": {
+    "name": "Colombia",
+    "short": "COL",
+    "provinces": 20,
+    "de": "Kolumbien"
+  },
+  "rgb(115,162,158)": {
+    "name": "Ecuador",
+    "short": "ECU",
+    "provinces": 14,
+    "de": "Ecuador"
+  },
+  "rgb(83,111,86)": {
+    "name": "Bolivia",
+    "short": "BOL",
+    "provinces": 20,
+    "de": "Bolivien"
+  },
+  "rgb(119,160,93)": {
+    "name": "Brazil",
+    "short": "BRA",
+    "provinces": 118,
+    "de": "Brasilien"
+  },
+  "rgb(88,135,167)": {
+    "name": "Argentina",
+    "short": "ARG",
+    "provinces": 47,
+    "de": "Argentinien"
+  },
+  "rgb(202,160,106)": {
+    "name": "Uruguay",
+    "short": "URU",
+    "provinces": 5,
+    "de": "Uruguay"
+  },
+  "rgb(184,110,76)": {
+    "name": "Paraguay",
+    "short": "PAR",
+    "provinces": 6,
+    "de": "Paraguay"
+  },
+  "rgb(195,89,83)": {
+    "name": "South Africa",
+    "short": "RSA",
+    "provinces": 47,
+    "de": "Südafrika"
+  },
+  "rgb(207,101,77)": {
+    "name": "Liberia",
+    "short": "LBR",
+    "provinces": 4,
+    "de": "Liberia"
+  },
+  "rgb(179,145,81)": {
+    "name": "Manchukuo",
+    "short": "MAN",
+    "provinces": 40,
+    "de": "Mandschukuo"
+  },
+  "rgb(180,171,127)": {
+    "name": "Saudi Arabia",
+    "short": "SAU",
+    "provinces": 34,
+    "de": "Saudi-Arabien"
+  },
+  "rgb(192,122,92)": {
+    "name": "Yemen",
+    "short": "YEM",
+    "provinces": 4,
+    "de": "Jemen"
+  },
+  "rgb(143,162,160)": {
+    "name": "Oman",
+    "short": "OMA",
+    "provinces": 5,
+    "de": "Oman"
+  },
+  "rgb(199,125,40)": {
+    "name": "Iraq",
+    "short": "IRQ",
+    "provinces": 23,
+    "de": "Irak"
+  },
+  "rgb(139,151,126)": {
+    "name": "Nepal",
+    "short": "NEP",
+    "provinces": 6,
+    "de": "Nepal"
+  },
+  "rgb(145,135,82)": {
+    "name": "Ma Clique",
+    "short": "MAC",
+    "provinces": 7,
+    "de": "Ma-Clique"
+  },
+  "rgb(126,137,125)": {
+    "name": "Mongolia",
+    "short": "MGL",
+    "provinces": 27,
+    "de": "Mongolei"
+  },
+  "rgb(129,169,87)": {
+    "name": "New Zealand",
+    "short": "NZL",
+    "provinces": 26,
+    "de": "Neuseeland"
+  },
+  "rgb(199,123,94)": {
+    "name": "Tannu Tuva",
+    "short": "TAN",
+    "provinces": 5,
+    "de": "Tannu-Tuwa"
+  }
+}

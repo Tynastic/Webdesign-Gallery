@@ -1,0 +1,24 @@
+# Caddy terminates HTTPS (certificates are obtained and renewed automatically)
+# and forwards everything, including the /collab websocket, to the app.
+{$DOMAIN} {
+	# The app already sends precompressed assets; this covers API and HTML.
+	encode zstd gzip
+
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		-Server
+	}
+
+	# Closed beta (optional): uncomment and set BETA_USER / BETA_PASSWORD_HASH in .env.
+	# Create the hash with:  docker compose run --rm caddy caddy hash-password
+	# basic_auth {
+	# 	{$BETA_USER} {$BETA_PASSWORD_HASH}
+	# }
+
+	reverse_proxy app:1234
+
+	# No access logs: IP addresses are not stored (see Datenschutz).
+	log {
+		output discard
+	}
+}
