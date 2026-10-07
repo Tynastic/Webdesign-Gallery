@@ -20,6 +20,7 @@ import LayersPanel from './LayersPanel.vue'
 import MapViewMenu from './MapViewMenu.vue'
 import NationsPanel from './NationsPanel.vue'
 import PhaseBar from './PhaseBar.vue'
+import PointsPanel from './PointsPanel.vue'
 import Toasts from './Toasts.vue'
 import { TOOL_BY_KEY, toolLabel } from './toolCatalog'
 import Toolbar from './Toolbar.vue'
@@ -206,6 +207,7 @@ const meName = () => (session.me ? displayName(roster.value.get(session.me), pro
     <aside class="sidebar" :aria-label="t('planner.panels')">
       <Inspector />
       <NationsPanel />
+      <PointsPanel />
       <LayersPanel />
     </aside>
 

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Plus, Trash2 } from 'lucide-vue-next'
 import { computed, ref } from 'vue'
-import { addNation, removeNation, updateNation } from '../../shared/schema'
+import { addNation, isTeam, removeNation, updateNation } from '../../shared/schema'
 import { useYMap } from '../composables/useY'
 import { t } from '../i18n'
 import { confirmAction, toast } from '../state/feedback'
@@ -89,6 +89,14 @@ function setColor(id: string, c: string | null) {
           </small>
         </div>
         <span v-if="session.me === n.id" class="tag me" :title="t('nations.youTitle')">{{ t('nations.you') }}</span>
+        <button
+          class="tag team-tag"
+          :aria-pressed="isTeam(n)"
+          :title="t(isTeam(n) ? 'nations.teamOn' : 'nations.teamOff', { nation: catalog.byId.get(n.id)?.name ?? n.id })"
+          @click="updateNation(plan, n.id, { team: !isTeam(n) })"
+        >
+          {{ t('nations.team') }}
+        </button>
         <button
           class="count-btn"
           :disabled="!progress.get(n.id)?.ids.length"

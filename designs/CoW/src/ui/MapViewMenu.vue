@@ -31,6 +31,11 @@ const fills = computed<{ value: FillMode; label: string }[]>(() => [
       <span class="toggle-track" aria-hidden="true" />
       <span>{{ t('view.labels') }} <small class="muted">{{ t('view.labelsHint') }}</small></span>
     </label>
+    <label class="toggle">
+      <input v-model="session.cities" type="checkbox" />
+      <span class="toggle-track" aria-hidden="true" />
+      <span>{{ t('view.cities') }} <small class="muted">{{ t('view.citiesHint') }}</small></span>
+    </label>
     <div class="field menu-foot">
       <span>{{ t('view.language') }}</span>
       <Segmented v-model="locale" :options="LOCALES" :label="t('view.language')" />

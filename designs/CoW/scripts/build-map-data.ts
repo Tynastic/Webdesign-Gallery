@@ -4,8 +4,12 @@
  * The SVG has no ids: path[i] (province polygon) and text[i] (its city label)
  * are paired by document order. Each fill colour is one 1942 nation.
  *
+ * world_province_resources.csv (one row per province, matched by name and label
+ * position) adds each province's production, from which core land and city
+ * kind are derived (see classifyProvinces).
+ *
  * Outputs:
- *   public/data/provinces.json  geometry + names (regenerated every run)
+ *   public/data/provinces.json  geometry + names + production (regenerated every run)
  *   public/data/nations.json    colour -> nation name (seeded once, then hand-edited)
  */
 import { createHash } from 'node:crypto'
@@ -13,10 +17,11 @@ import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { XMLParser } from 'fast-xml-parser'
-import type { MapData, MapEdges, NationsFile, Province, SharedBorder } from '../src/map/types'
+import type { CityKind, MapData, MapEdges, NationsFile, Province, Resource, SharedBorder } from '../src/map/types'
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const SVG_PATH = resolve(root, 'world_map_political.svg')
+const RESOURCES_PATH = resolve(root, 'world_province_resources.csv')
 const PROVINCES_OUT = resolve(root, 'public/data/provinces.json')
 const NATIONS_OUT = resolve(root, 'public/data/nations.json')
 
@@ -97,6 +102,91 @@ const SEED_NATIONS: Record<string, [name: string, short: string]> = {
 }
 
 type XmlNode = Record<string, string>
+
+/** One row of world_province_resources.csv (the game's own province ids are not used). */
+export interface ResourceRow {
+  name: string
+  x: number
+  y: number
+  specialty: Resource | null
+  prod: Province['prod']
+}
+
+export function parseResources(csv: string): ResourceRow[] {
+  const [head, ...lines] = csv.trim().split(/\r?\n/)
+  const cols = head.split(',')
+  return lines.map((line, i) => {
+    const cells = line.split(',')
+    if (cells.length !== cols.length) throw new Error(`world_province_resources.csv line ${i + 2}: expected ${cols.length} cells, got ${cells.length}`)
+    const r = Object.fromEntries(cols.map((c, j) => [c, cells[j]]))
+    return {
+      name: r.name,
+      x: Number(r.x),
+      y: Number(r.y),
+      specialty: (r.specialty || null) as Resource | null,
+      prod: [Number(r.food), Number(r.metal), Number(r.oil), Number(r.manpower), Number(r.money)],
+    }
+  })
+}
+
+export interface ClassifyInput {
+  /** 1942 owner (colour index). */
+  nation: number
+  neighbors: number[]
+  label: [number, number]
+  /** Production of the specialty resource; null for provinces without one. */
+  value: number | null
+  money: number
+}
+
+/**
+ * Core land and city kind, derived from production. Home provinces produce 600
+ * money (no resource) or 750/1,500/3,000/6,000 of their resource; non-core land
+ * produces a quarter: 150, or 187/375/750/1,500. So 750 and 1,500 are ambiguous
+ * (a home province, or a colonial city / Doppelstadt). Those take the majority
+ * status of their same-nation land neighbours; islands without any use the three
+ * nearest same-nation provinces. The home-equivalent value then gives the kind:
+ * 6,000 = Doppelstadt, 3,000 = city.
+ */
+export function classifyProvinces(items: ClassifyInput[], worldWidth: number): { core: boolean; city: CityKind }[] {
+  const core = items.map(({ value, money }): boolean | null => (value === null ? money >= 600 : value >= 3000 ? true : value >= 750 ? null : false))
+  const majority = (votes: boolean[]) => votes.filter(Boolean).length * 2 >= votes.length
+
+  // Neighbour vote, one round at a time so the result doesn't depend on province order.
+  for (let progress = true; progress; ) {
+    progress = false
+    const decided = items.map((it, i) => {
+      if (core[i] !== null) return core[i]
+      const votes = it.neighbors.filter((n) => items[n].nation === it.nation && core[n] !== null).map((n) => core[n]!)
+      return votes.length ? majority(votes) : null
+    })
+    decided.forEach((c, i) => {
+      if (c !== null && core[i] === null) {
+        core[i] = c
+        progress = true
+      }
+    })
+  }
+
+  const dist = (a: [number, number], b: [number, number]) => {
+    const dx = Math.abs(a[0] - b[0]) % worldWidth
+    return Math.hypot(Math.min(dx, worldWidth - dx), a[1] - b[1])
+  }
+  const resolved = core.map((c, i) => {
+    if (c !== null) return c
+    const nearest = items
+      .map((it, j) => ({ j, d: dist(it.label, items[i].label) }))
+      .filter(({ j }) => j !== i && items[j].nation === items[i].nation && core[j] !== null)
+      .sort((a, b) => a.d - b.d)
+      .slice(0, 3)
+    return nearest.length ? majority(nearest.map(({ j }) => core[j]!)) : true
+  })
+
+  return items.map((it, i) => {
+    const home = (it.value ?? 0) * (resolved[i] ? 1 : 4)
+    return { core: resolved[i], city: home >= 6000 ? 2 : home >= 3000 ? 1 : 0 }
+  })
+}
 
 function parseRing(d: string): number[] {
   // Paths are single rings of absolute integer coordinates: "M x,y L x,y ... Z".
@@ -180,7 +270,7 @@ function main() {
     }
     if (!pointInRing(label[0], label[1] - 3, ring)) mismatches.push(`#${id} ${name}`)
 
-    provinces.push({ id, name, nation: colorIndex.get(p.fill)!, label, area: Math.round(ringArea(ring)), neighbors: [], ring })
+    provinces.push({ id, name, nation: colorIndex.get(p.fill)!, label, area: Math.round(ringArea(ring)), neighbors: [], ring, prod: [0, 0, 0, 0, 0], res: null, core: true, city: 0 })
   })
 
   // Adjacent provinces share at least one identical border edge (the SVG reuses exact vertices).
@@ -200,6 +290,27 @@ function main() {
   for (const owners of edgeOwners.values())
     for (const a of owners) for (const b of owners) if (a !== b) neighbors[a].add(b)
   provinces.forEach((p) => (p.neighbors = [...neighbors[p.id]].sort((a, b) => a - b)))
+
+  // Production: rows are matched by name and must sit exactly on the province's label.
+  const rows = new Map<string, ResourceRow>()
+  for (const r of parseResources(readFileSync(RESOURCES_PATH, 'utf8'))) {
+    if (rows.has(r.name)) throw new Error(`world_province_resources.csv: duplicate province ${r.name}`)
+    rows.set(r.name, r)
+  }
+  for (const p of provinces) {
+    const r = rows.get(p.name)
+    if (!r) throw new Error(`world_province_resources.csv: no row for #${p.id} ${p.name}`)
+    if (Math.round(r.x) !== p.label[0] || Math.round(r.y) !== p.label[1]) throw new Error(`world_province_resources.csv: ${p.name} is at ${r.x},${r.y}, the map label at ${p.label}`)
+    p.prod = r.prod
+    p.res = r.specialty
+    rows.delete(p.name)
+  }
+  if (rows.size) throw new Error(`world_province_resources.csv: rows without a province: ${[...rows.keys()].slice(0, 10).join(', ')}`)
+  const kinds = classifyProvinces(
+    provinces.map((p) => ({ nation: p.nation, neighbors: p.neighbors, label: p.label, value: p.res ? p.prod[['food', 'metal', 'oil'].indexOf(p.res)] : null, money: p.prod[4] })),
+    width,
+  )
+  provinces.forEach((p, i) => Object.assign(p, kinds[i]))
 
   // Coastlines have one owner. Every other edge is grouped by the province pair it separates, so the
   // client can decide at runtime (from current ownership) whether it is a nation or a province border.
@@ -251,6 +362,8 @@ function main() {
   console.log(`provinces: ${provinces.length}  nations: ${colors.length}  size: ${kb} KB  hash: ${hash}`)
   console.log(`adjacency: ${isolated} provinces without land neighbours (islands)`)
   console.log(`edges: ${edges.coast.length} coast polylines, ${edges.shared.length} shared border polylines`)
+  const count = (f: (p: Province) => boolean) => provinces.filter(f).length
+  console.log(`production: ${count((p) => p.city === 2)} Doppelstädte, ${count((p) => p.city === 1)} cities, ${count((p) => !p.core)} non-core provinces`)
   console.log(`nations.json: ${added} added, ${Object.values(nations).filter((n) => n.short === '?').length} still unnamed`)
   if (mismatches.length) console.warn(`label outside its polygon (${mismatches.length}): ${mismatches.slice(0, 20).join(', ')}`)
   else console.log('label/polygon pairing: 0 mismatches')

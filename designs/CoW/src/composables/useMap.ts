@@ -24,7 +24,7 @@ export function useMap(el: Ref<HTMLElement | null>, data: MapData, catalog: Nati
 
   const p = () => planner.value
   watch(() => session.tool, (t) => p()?.setTool(t))
-  watch(() => [session.fillMode, session.borders, session.labels], () => p()?.syncStyle())
+  watch(() => [session.fillMode, session.borders, session.labels, session.cities], () => p()?.syncStyle())
   watch(() => [session.selectedProvince, session.selectedObject], () => p()?.syncSelection())
   watch(
     () => [session.activePhase, session.hiddenLayers],

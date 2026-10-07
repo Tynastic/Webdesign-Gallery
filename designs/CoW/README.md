@@ -27,6 +27,16 @@ The interface is German by default; English is one click away. Current version: 
 
 More: `?` shows all shortcuts. Click a teammate's avatar to follow their view. Export a PNG with a legend for the game chat, or a JSON backup of the plan.
 
+**Cities and production.** Cities are marked with a dot, Doppelstädte (6,000 production) with a double ring, and both are labelled first. Click a province to see what it produces per day, whether it is core land, and what conquering it costs.
+
+**Point system.** Each nation may conquer a daily allowance of points (set it under **Points** in the sidebar). The price of a province comes from [world_nation_class.csv](world_nation_class.csv):
+
+- the **class of the nation holding it** (1 = USA/USSR … 6 = small nations); nations without a class cost 0,
+- whether it is **enemy core land**, **enemy non-core land**, or **your own or a teammate's core land** (mark teammates with **Team** in the Nations panel),
+- whether it is a **province**, **city** or **Doppelstadt**.
+
+The Points panel totals each nation's planned conquests against the allowance, and the Plan conquests tool shows the running total while you paint.
+
 **Distances are estimates.** The game map is a stylised Mercator projection, so distances are within about ±35%. Measure a known distance and click **Calibrate…** to correct the whole plan.
 
 ## Running it locally

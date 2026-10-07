@@ -13,7 +13,19 @@ export interface Province {
   neighbors: number[]
   /** Flat ring in SVG pixels: [x0, y0, x1, y1, ...]. */
   ring: number[]
+  /** Daily production as in the game (non-core land already at 25%), in RESOURCES order. */
+  prod: [food: number, metal: number, oil: number, manpower: number, money: number]
+  /** The resource the province specialises in, if any. */
+  res: Resource | null
+  /** Core land of its 1942 owner (colonies and other annexed land are not). */
+  core: boolean
+  /** 0 = province, 1 = city (3,000 home production), 2 = Doppelstadt (6,000). */
+  city: CityKind
 }
+
+export const RESOURCES = ['food', 'metal', 'oil', 'manpower', 'money'] as const
+export type Resource = 'food' | 'metal' | 'oil'
+export type CityKind = 0 | 1 | 2
 
 /** A border polyline between provinces a < b (flat [x0, y0, x1, y1, ...]). */
 export interface SharedBorder {

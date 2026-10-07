@@ -35,6 +35,8 @@ export interface SessionState {
   fillMode: FillMode
   borders: boolean
   labels: boolean
+  /** Highlight cities and Doppelstädte with map symbols and bold labels. */
+  cities: boolean
   /** Travel speed (km/h) for measurement travel times; null = distance only. */
   measureSpeed: number | null
   /** Transient: uncalibrated length of the last finished measurement (for calibration). */
@@ -49,7 +51,7 @@ export interface SessionState {
 
 const STORAGE_KEY = 'cow-planner.session'
 /** Only preferences are remembered between visits, not transient selection. */
-const PERSISTED: (keyof SessionState)[] = ['measureSpeed', 'fillMode', 'borders', 'labels', 'arrowVariant', 'unitType', 'objectiveIcon', 'hiddenLayers']
+const PERSISTED: (keyof SessionState)[] = ['measureSpeed', 'fillMode', 'borders', 'labels', 'cities', 'arrowVariant', 'unitType', 'objectiveIcon', 'hiddenLayers']
 
 function restore(): Partial<SessionState> {
   try {
@@ -80,6 +82,7 @@ export const session = reactive<SessionState>({
   fillMode: 'muted',
   borders: true,
   labels: true,
+  cities: true,
   measureSpeed: null,
   measuredKm: null,
   following: null,

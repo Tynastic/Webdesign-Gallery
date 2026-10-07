@@ -13,6 +13,7 @@ The map is drawn by our own canvas layers (`src/map/baseLayer.ts`, `markLayer.ts
 | Land | Nation colours **muted by default** (mixed 55% toward paper). Vivid and Off are one click away | Figure/ground: the base map recedes so player plans stand out |
 | Borders | Three tiers: province (thin, fades out when zoomed far out), nation (dashed over a light underline), coast | Visual hierarchy: you can always tell which provinces belong together |
 | Labels | Nation names in letterspaced serif caps when zoomed out, city names in sans with a paper halo when zoomed in, packed without overlaps | Atlas convention. Labels stay readable on any fill |
+| Cities | Dot for a city, double ring for a Doppelstadt, always drawn; their names are placed first, in bold, and in smaller provinces than others. Doppelstädte stay visible when zoomed far out | Atlas convention for settlement size. Cities are the provinces that matter most, so they win label collisions |
 | Planned conquests | Tint, diagonal hatching that stays the same size on screen, and an inner outline in the nation's marker colour; a dashed outline once conquered | Readable even over a same-hued nation, and distinct from nation fills |
 | Drawings | Tapered spline arrows with a broad head, barbed or double front lines, dashed zones, NATO-style unit frames | Uses the visual language players already know from war maps |
 
@@ -25,6 +26,7 @@ The map is drawn by our own canvas layers (`src/map/baseLayer.ts`, `markLayer.ts
    - The active tool is filled brass and the active phase chip is highlighted.
    - The options bar shows where new drawings go (`→ Layer · Phase`).
    - Undo and redo are disabled when there is nothing to undo or redo.
+   - While planning conquests, the options bar shows the nation's running point total against the daily allowance and turns red when it is exceeded. The Points panel says by how much.
    - The splash screen shows progress while the map loads.
 2. **Match with the real world**
    - Military map symbols (attack arrows, front lines, NATO unit frames) and game terms (provinces, nations, phases such as "Day 1–3").

@@ -2,8 +2,10 @@
 import { Eraser, RotateCcw } from 'lucide-vue-next'
 import { computed, ref } from 'vue'
 import { distanceFactor, setDistanceFactor, type ArrowVariant, type FrontVariant, type ZoneVariant } from '../../shared/schema'
+import { usePoints } from '../composables/usePoints'
 import { useYArray, useYMap } from '../composables/useY'
 import { t } from '../i18n'
+import { fmtNum, fmtPoints } from '../i18n/format'
 import { toast } from '../state/feedback'
 import { OBJECTIVE_ICONS, UNIT_TYPES, objectiveLabel, objectiveSvg, unitLabel, unitSvg } from '../render/icons'
 import { session } from '../state/session'
@@ -64,6 +66,14 @@ const target = computed(() => {
   const phase = phases.value.find((p) => p.id === session.activePhase)?.name
   return phase ? `${layer} · ${phase}` : layer
 })
+const { byNation, allowance } = usePoints()
+/** Points of everything planned for the nation being painted for. */
+const assignPoints = computed(() => {
+  if (session.tool !== 'assign' || !session.assignNation) return null
+  const used = byNation.value.get(session.assignNation)?.total ?? 0
+  const max = allowance.value
+  return { text: max === null ? t('options.points', { used: fmtPoints(used) }) : t('options.pointsOf', { used: fmtNum(used), max: fmtPoints(max) }), over: max !== null && used > max }
+})
 const assignPhase = computed(() => phases.value.find((p) => p.id === session.activePhase)?.name)
 
 const arrows = computed<{ value: ArrowVariant; label: string }[]>(() => [
@@ -118,6 +128,7 @@ const iconColor = computed(() => session.drawColor ?? (session.me ? roster.value
         :exclude="[...roster.keys()]"
         @update:model-value="pickOtherOwner"
       />
+      <span v-if="assignPoints" class="to-points" :class="{ over: assignPoints.over }" :title="t('options.pointsTitle')" role="status">{{ assignPoints.text }}</span>
       <span v-if="session.tool === 'assign' && assignPhase" class="to-target" :title="t('options.phaseTitle')">{{ t('options.phase', { name: assignPhase }) }}</span>
     </template>
 

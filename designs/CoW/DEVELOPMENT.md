@@ -43,9 +43,12 @@ Locally the server stores its data in `server/data/` (git-ignored).
 
 ```
 world_map_political.svg     source map (no ids; see "Map data")
+world_province_resources.csv production per province (input to map:build)
+world_nation_class.csv      point table of the conquest rules (mirrored in shared/points.ts, checked by tests)
 scripts/                    build-map-data (SVG -> JSON), compress-dist, backup
 public/data/                provinces.json (generated), nations.json (hand-edited)
 shared/schema.ts            Yjs plan model + mutation helpers (schema v2), import/export
+shared/points.ts            conquest point rules: nation classes, price table, per-nation sums
 server/                     index (Hocuspocus wiring), http (API, static files, headers), db (SQLite),
                             limits, config, legal/ (Impressum and Datenschutz templates)
 src/map/                    Leaflet + canvas rendering, no Vue
@@ -94,12 +97,17 @@ The SVG has `viewBox 0 0 13562 7000` and no ids. Province `<path>` *i* and city 
   - for each province: name, 1942 nation, label point, area, ring and neighbours;
   - coastlines;
   - every land border, **tagged with the two provinces it separates**, so the client can redraw nation borders after conquests.
+- **Production** from `world_province_resources.csv`. Rows carry the game's own province ids, so they are matched by name and must sit exactly on the label point; the build fails on any mismatch. Each province gets `prod` (food, metal, oil, manpower, money), `res`, `core` and `city`.
+- **Core land and city kind** are derived, since the CSV has neither (`classifyProvinces`). Home provinces produce 600 money or 750/1,500/3,000/6,000 of their resource; non-core land produces a quarter (150, or 187/375/750/1,500). The 750 and 1,500 tiers are ambiguous and take the majority status of their same-nation land neighbours; islands without any use the three nearest same-nation provinces. Home-equivalent 6,000 = Doppelstadt, 3,000 = city.
+  - Known gap: three Bhutan provinces share Hungary's colour in the SVG, so they count as Hungarian.
 - **`nations.json`:** maps each colour to an English name, a German name (`de`) and a unique short code. The short code is the nation id in plans. The file is seeded from capital cities on the first run and **edited by hand after that**.
 
 ### Nations and conquests
 
 - The plan's roster lists nations by short code. A nickname marks a nation that a teammate plays.
 - Planned conquests (`assignments`), ownership and "who am I" all reference nation codes.
+- Roster nations can be marked as **team** (`team`; unset = has a player). Team members' core land is priced as team core land.
+- **Points** ([shared/points.ts](shared/points.ts)): a planned conquest is priced by the current owner's class, the land category (enemy core / enemy non-core / own or team core, from the province's 1942 owner and `core`) and its kind. An achieved conquest is priced as taken from its 1942 owner. The daily allowance is `meta.dailyPoints` and travels with JSON exports.
 - Ownership recolours provinces with the owner's map colour. Nation borders and territory labels (placed at the medoid of a nation's provinces) are recomputed from the current owners.
 
 ## Rendering

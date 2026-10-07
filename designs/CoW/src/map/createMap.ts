@@ -1,9 +1,11 @@
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import type * as Y from 'yjs'
-import { displayName, distanceFactor, phaseVisibility, type Plan } from '../../shared/schema'
+import { plannedCost } from '../../shared/points'
+import { displayName, distanceFactor, isTeam, phaseVisibility, type Plan } from '../../shared/schema'
 import { ObjectRenderer } from '../render/objectRenderer'
 import { t } from '../i18n'
+import { fmtNum, fmtPoints, kindLabel, resourceLabel } from '../i18n/format'
 import { escapeHtml } from '../render/icons'
 import type { SessionState, ToolId } from '../state/session'
 import type { Presence } from '../sync/presence'
@@ -262,7 +264,8 @@ export class PlannerMap {
 
   syncStyle() {
     this.base.setStyle(this.session.fillMode, this.session.borders)
-    if (this.session.labels) this.labels.addTo(this.map)
+    this.labels.setMode(this.session.labels, this.session.cities)
+    if (this.session.labels || this.session.cities) this.labels.addTo(this.map)
     else this.labels.remove()
   }
 
@@ -413,10 +416,17 @@ export class PlannerMap {
     const plannedEntry = a ? this.plan.nations.get(a.nation) : undefined
     const phase = a?.phaseId ? this.plan.phases.toArray().find((ph) => ph.id === a.phaseId)?.name : ''
     const ownerText = displayName(this.plan.nations.get(owner.id), owner.name)
+    const res = p.res ? ` · ${resourceLabel(p.res)} ${fmtNum(p.prod[['food', 'metal', 'oil'].indexOf(p.res)])}` : ''
+    const cost =
+      a &&
+      plannedCost({ province: id, attacker: a.nation, owner: owner.id, start: start.id, coreNation: p.core ? start.id : null, kind: p.city }, (n) =>
+        isTeam(this.plan.nations.get(n)),
+      )
     this.tooltip.setContent(
       `<b>${escapeHtml(p.name)}</b><span>${escapeHtml(ownerText)}${owner !== start ? ` · ${escapeHtml(t('tip.conqueredFrom', { nation: start.name }))}` : ''}</span>` +
-        (planned && plannedEntry
-          ? `<em><i style="background:${plannedEntry.color}"></i>${owner === planned ? '✓ ' : '→ '}${escapeHtml(displayName(plannedEntry, planned.name))}${phase ? ` · ${escapeHtml(phase)}` : ''}</em>`
+        `<span class="tip-kind${p.city ? ' city' : ''}">${escapeHtml(kindLabel(p.city) + res)}</span>` +
+        (planned && plannedEntry && cost
+          ? `<em><i style="background:${plannedEntry.color}"></i>${owner === planned ? '✓ ' : '→ '}${escapeHtml(displayName(plannedEntry, planned.name))}${phase ? ` · ${escapeHtml(phase)}` : ''} · ${escapeHtml(fmtPoints(cost.points))}</em>`
           : ''),
     )
     if (!this.map.hasLayer(this.tooltip)) this.tooltip.addTo(this.map)

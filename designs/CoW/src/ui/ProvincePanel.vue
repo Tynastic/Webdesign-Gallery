@@ -1,9 +1,12 @@
 <script setup lang="ts">
-import { CircleCheck, LocateFixed, RotateCcw, X } from 'lucide-vue-next'
+import { CircleCheck, Coins, Droplet, LocateFixed, Pickaxe, RotateCcw, Users, Wheat, X } from 'lucide-vue-next'
 import { computed } from 'vue'
 import { assignProvinces, displayName, setOwners } from '../../shared/schema'
+import { usePoints } from '../composables/usePoints'
 import { useYArray, useYMap } from '../composables/useY'
 import { t } from '../i18n'
+import { categoryLabel, classLabel, fmtNum, fmtPoints, kindLabel } from '../i18n/format'
+import { RESOURCES } from '../map/types'
 import { session } from '../state/session'
 import { usePlanner } from './context'
 import NationSelect from './NationSelect.vue'
@@ -41,6 +44,21 @@ const plannedModel = computed({
 const phaseModel = computed({
   get: () => assignment.value?.phaseId ?? '',
   set: (v: string) => assignment.value && edit(() => assignProvinces(plan, [props.id], assignment.value!.nation, v || null)),
+})
+
+// ---------- production and conquest points ----------
+const { costFor } = usePoints()
+const ICONS = { food: Wheat, metal: Pickaxe, oil: Droplet, manpower: Users, money: Coins }
+const production = computed(() =>
+  RESOURCES.map((r, i) => ({ key: r, icon: ICONS[r], label: t(`res.${r}` as const), value: province.value.prod[i] })).filter((r) => r.value > 0),
+)
+/** The price for the planned nation, or for my own nation while nothing is planned here. */
+const cost = computed(() => {
+  const attacker = assignment.value?.nation ?? session.me
+  if (!attacker || (!assignment.value && owner.value.id === attacker)) return null
+  const c = costFor(props.id, attacker)
+  const name = displayName(roster.value.get(attacker), catalog.byId.get(attacker)?.name ?? attacker)
+  return { ...c, text: t('points.costLine', { points: fmtPoints(c.points), name }) }
 })
 
 const neighbors = computed(() =>
@@ -94,6 +112,9 @@ function pick(id: number) {
         <NationSelect v-model="plannedModel" :label="t('prov.plannedLabel')" :placeholder="t('prov.nobody')" roster-only />
       </div>
       <p v-if="!roster.size" class="muted fine">{{ t('prov.noNations') }}</p>
+      <p v-if="cost" class="cost-line" :title="t('points.costTitle')">
+        <strong>{{ cost.text }}</strong> · {{ categoryLabel(cost.category) }} · {{ classLabel(cost.ownerClass) }}
+      </p>
       <p v-if="achieved" class="done-text"><CircleCheck :size="15" />{{ t('prov.taken', { name: ownerName }) }}</p>
       <div v-if="assignment && phases.length" class="field">
         <span>{{ t('prov.inPhase') }}</span>
@@ -103,6 +124,19 @@ function pick(id: number) {
         </select>
       </div>
     </div>
+
+    <h3 class="sub">{{ t('prov.production') }}</h3>
+    <div class="prod-tags">
+      <span class="tag kind-tag" :class="{ city: province.city }"><span class="kind-sym" :class="`k${province.city}`" />{{ kindLabel(province.city) }}</span>
+      <span v-if="province.core" class="tag" :title="t('prov.coreTitle', { nation: start.name })">{{ t('prov.core') }}</span>
+      <span v-else class="tag warn" :title="t('prov.nonCoreTitle')">{{ t('prov.nonCore') }}</span>
+    </div>
+    <dl class="prod">
+      <div v-for="r in production" :key="r.key" :class="{ main: r.key === province.res }">
+        <dt><component :is="r.icon" :size="14" />{{ r.label }}</dt>
+        <dd>{{ fmtNum(r.value) }}</dd>
+      </div>
+    </dl>
 
     <dl class="facts">
       <dt>{{ t('prov.status') }}</dt>

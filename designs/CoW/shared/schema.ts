@@ -61,6 +61,8 @@ export interface PlanNation {
   nickname: string
   /** Bright marker colour for this nation's plans and drawings (the map colour is too muted). */
   color: string
+  /** On the coalition's team (prices its core land as team core land). Unset = has a player. */
+  team?: boolean
 }
 
 export interface Layer {
@@ -125,6 +127,9 @@ export function ensureDefaults(plan: Plan, defaults: { title?: string; layerName
     }
   })
 }
+
+/** Team members get team prices on each other's core land; nations with a player count by default. */
+export const isTeam = (entry: PlanNation | undefined): boolean => !!entry && (entry.team ?? entry.nickname !== '')
 
 /** "Tyo (Germany)" for nations with a player, "Germany" otherwise. */
 export function displayName(entry: PlanNation | undefined, nationName: string): string {
@@ -274,6 +279,16 @@ export function setDistanceFactor(plan: Plan, factor: number) {
   tx(plan, () => (factor === 1 ? plan.meta.delete('distanceFactor') : plan.meta.set('distanceFactor', factor)))
 }
 
+/** Points every nation may conquer per day; null = no limit set. */
+export const dailyPoints = (plan: Plan): number | null => {
+  const n = Number(plan.meta.get('dailyPoints'))
+  return Number.isFinite(n) && n > 0 ? n : null
+}
+
+export function setDailyPoints(plan: Plan, points: number | null) {
+  tx(plan, () => (points && points > 0 ? plan.meta.set('dailyPoints', points) : plan.meta.delete('dailyPoints')))
+}
+
 // ---------- import / export ----------
 
 /** Errors thrown by importPlan; the UI maps them to translated messages. */
@@ -295,6 +310,8 @@ export interface PlanSnapshot {
   objects: PlanObject[]
   assignments: Record<string, Assignment>
   ownership: Record<string, string>
+  /** Optional: absent in files from before the point system. */
+  dailyPoints?: number
 }
 
 export function exportPlan(plan: Plan): PlanSnapshot {
@@ -309,6 +326,7 @@ export function exportPlan(plan: Plan): PlanSnapshot {
     objects: [...plan.objects.values()],
     assignments: Object.fromEntries(plan.assignments.entries()),
     ownership: Object.fromEntries(plan.ownership.entries()),
+    dailyPoints: dailyPoints(plan) ?? undefined,
   }
 }
 
@@ -326,6 +344,7 @@ export function importPlan(plan: Plan, snap: PlanSnapshot, defaults?: { title?: 
     plan.phases.delete(0, plan.phases.length)
     plan.meta.set('title', snap.title || defaults?.title || 'Imported plan')
     plan.meta.set('schema', SCHEMA_VERSION)
+    setDailyPoints(plan, snap.dailyPoints ?? null)
     if (!v1) snap.nations.forEach((n) => plan.nations.set(n.id, n))
     snap.layers.forEach((l) => plan.layers.set(l.id, l))
     plan.phases.push(snap.phases)

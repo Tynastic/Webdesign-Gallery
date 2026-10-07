@@ -626,6 +626,56 @@ body:has(.legal), body:has(.lobby) { overflow-y: auto; }
 
 .lobby-toasts .toasts { position: fixed; top: 16px; right: 16px; }
 
+/* ---------- cities, production and conquest points ---------- */
+/* Same symbols as on the map: dot = city, double ring = Doppelstadt. */
+.kind-sym { position: relative; display: inline-block; flex: none; width: 10px; height: 10px; border-radius: 50%; }
+.kind-sym.k0 { width: 6px; height: 6px; margin: 0 2px; border: 1px solid var(--muted); }
+.kind-sym.k1 { background: var(--text); box-shadow: 0 0 0 1.5px var(--surface); width: 8px; height: 8px; margin: 0 1px; }
+.kind-sym.k2 { border: 2px solid var(--text); }
+.kind-sym.k2::after { content: ''; position: absolute; inset: 2px; border-radius: 50%; background: var(--text); }
+.leaflet-tooltip.cow-tip .tip-kind.city { color: var(--text-2); font-weight: 600; }
+
+.prod-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+.kind-tag { display: inline-flex; align-items: center; gap: 6px; }
+.kind-tag.city { color: var(--accent-strong); border-color: color-mix(in srgb, var(--accent) 45%, transparent); }
+.prod { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 16px; margin: 0 0 16px; font-size: 13px; }
+.prod > div { display: flex; justify-content: space-between; gap: 8px; }
+.prod dt { display: flex; align-items: center; gap: 6px; color: var(--muted); }
+.prod dd { margin: 0; font-family: var(--mono); font-size: 12px; }
+.prod .main dt, .prod .main dd { color: var(--text); font-weight: 700; }
+.cost-line { margin: -4px 0 12px; font-size: 12.5px; color: var(--text-2); }
+.cost-line strong { color: var(--text); }
+
+.team-tag { cursor: pointer; background: none; color: var(--muted); border-style: dashed; }
+.team-tag:hover { color: var(--text); border-color: var(--accent); }
+.team-tag[aria-pressed='true'] { color: #7fdc9a; border-style: solid; border-color: rgb(127 220 154 / 0.45); background: rgb(60 140 80 / 0.15); }
+
+.points-allowance > span { width: auto !important; flex: 1; }
+.points-allowance input { text-align: right; font-family: var(--mono); }
+.points-list { margin: 12px 0 0; padding: 0; list-style: none; display: grid; gap: 6px; }
+.points-row { padding: 6px 8px 8px; background: var(--surface-2); border: 1px solid var(--line); border-radius: var(--r-sm); }
+.points-row.over { border-color: color-mix(in srgb, var(--danger) 55%, var(--line)); }
+.points-head { display: flex; align-items: center; gap: 7px; width: 100%; padding: 2px 0; background: none; border: 0; text-align: left; }
+.points-chev { color: var(--muted); transition: transform 0.15s; }
+.points-head[aria-expanded='true'] .points-chev { transform: rotate(90deg); }
+.points-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+.points-sum { font: 700 12.5px var(--mono); white-space: nowrap; }
+.points-row.over .points-sum, .points-over { color: var(--danger); }
+.points-bar { height: 4px; margin: 6px 0 0; border-radius: 2px; background: var(--line); overflow: hidden; }
+.points-bar span { display: block; height: 100%; background: var(--accent); border-radius: 2px; transition: width 0.2s; }
+.points-row.over .points-bar span { background: var(--danger); }
+.points-meta { margin: 5px 0 0; font-size: 12px; color: var(--muted); }
+.points-items { margin: 8px 0 0; padding: 6px 0 0; list-style: none; border-top: 1px solid var(--line); display: grid; gap: 1px; }
+.points-item { display: flex; align-items: center; gap: 7px; width: 100%; min-height: 28px; padding: 2px 4px; background: none; border: 0; border-radius: 4px; text-align: left; font-size: 12.5px; }
+.points-item:hover { background: var(--surface-3); }
+.points-item-name { flex: none; max-width: 40%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+.points-item-cat { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); font-size: 11.5px; }
+.points-item b { font: 700 12px var(--mono); white-space: nowrap; }
+.points-item.done .points-item-name { color: var(--muted); }
+.points-done { color: #7fdc9a; flex: none; }
+.to-points { padding: 3px 9px; font: 700 12px var(--mono); white-space: nowrap; color: var(--text); background: var(--bg); border: 1px solid var(--line); border-radius: 12px; }
+.to-points.over { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 55%, var(--line)); }
+
 /* ---------- small screens ---------- */
 @media (max-width: 900px) {
   :root { --sidebar-w: 280px; }

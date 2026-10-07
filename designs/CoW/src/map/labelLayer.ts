@@ -7,6 +7,11 @@ import type { MapData } from './types'
 const NATION_MODE_SCALE = 0.3
 /** A city label is only considered once its province is this many screen px across. */
 const MIN_PROVINCE_PX = 26
+/** Cities and Doppelstädte are labelled in smaller provinces than ordinary ones. */
+const MIN_CITY_PX = 14
+/** Below these map scales the city / Doppelstadt symbols are left out. */
+const CITY_SYMBOL_SCALE = 0.2
+const DOUBLE_SYMBOL_SCALE = 0.1
 const CELL = 64
 
 interface Rect { x0: number; y0: number; x1: number; y1: number }
@@ -15,11 +20,19 @@ interface Rect { x0: number; y0: number; x1: number; y1: number }
  * City and nation labels drawn on one canvas sized to the viewport. Labels are
  * placed largest-province-first and skipped when they would overlap one already
  * placed, so density adapts to the zoom level automatically.
+ *
+ * Cities are the most important provinces, so with highlighting on they get an
+ * atlas symbol (dot = city, double ring = Doppelstadt), are labelled first, in
+ * bold, and in smaller provinces than the rest.
  */
 export class LabelLayer extends L.Layer {
   private canvas!: HTMLCanvasElement
   private ctx!: CanvasRenderingContext2D
   private readonly byArea: number[]
+  /** Doppelstädte, then cities, each largest first. */
+  private readonly cities: number[]
+  private showLabels = true
+  private showCities = true
   private nationNames: string[]
   private territories: TerritoryLabel[]
   private widthCache = new Map<string, number>()
@@ -29,6 +42,7 @@ export class LabelLayer extends L.Layer {
     super()
     L.Util.setOptions(this, { pane: 'labels' })
     this.byArea = data.provinces.map((p) => p.id).sort((a, b) => data.provinces[b].area - data.provinces[a].area)
+    this.cities = this.byArea.filter((id) => data.provinces[id].city).sort((a, b) => data.provinces[b].city - data.provinces[a].city)
     this.nationNames = nations.list.map((n) => n.name.toUpperCase())
     this.territories = territoryLabels(data, Int16Array.from(data.provinces, (p) => p.nation))
   }
@@ -36,6 +50,13 @@ export class LabelLayer extends L.Layer {
   /** Nation names in the current UI language. */
   refreshNames() {
     this.nationNames = this.nations.list.map((n) => n.name.toUpperCase())
+    if (this._map) this.schedule()
+  }
+
+  /** Which parts to draw: names (cities and nations) and the city highlighting. */
+  setMode(labels: boolean, cities: boolean) {
+    this.showLabels = labels
+    this.showCities = cities
     if (this._map) this.schedule()
   }
 
@@ -92,6 +113,8 @@ export class LabelLayer extends L.Layer {
     const b = map.getBounds()
     for (const k of copiesIn(b.getWest(), b.getEast(), this.data.width)) {
       const shift = k * this.data.width
+      if (this.showCities) this.drawCitySymbols(map, scale, size, shift)
+      if (!this.showLabels) continue
       if (scale < NATION_MODE_SCALE) this.drawNations(map, scale, size, placed, shift)
       else this.drawCities(map, scale, size, placed, shift)
     }
@@ -118,16 +141,69 @@ export class LabelLayer extends L.Layer {
   private drawCities(map: L.Map, scale: number, size: L.Point, placed: Map<number, Rect[]>, shift: number) {
     const ctx = this.ctx
     const fontPx = scale >= 2 ? 13 : scale >= 1 ? 12 : 11
+    const cities = this.showCities
+    if (cities)
+      for (const id of this.cities) {
+        const p = this.data.provinces[id]
+        if (Math.sqrt(p.area) * scale < MIN_CITY_PX) continue
+        const pt = this.anchor(map, p.label, shift)
+        if (!onScreen(pt, size)) continue
+        // Name to the right of the symbol; the reserved box covers both.
+        const r = symbolRadius(p.city, scale)
+        const px = fontPx + p.city - 1
+        ctx.font = `700 ${px}px ${FONT}`
+        const w = this.measure(p.name, px, 700)
+        const box = L.point(pt.x - r + (2 * r + 4 + w) / 2, pt.y)
+        if (!this.fits(box, 2 * r + 4 + w, px, size, placed)) continue
+        ctx.textAlign = 'left'
+        this.text(p.name, L.point(pt.x + r + 4, pt.y), px, '#1c160b', 'rgba(250,246,234,0.92)')
+        ctx.textAlign = 'center'
+      }
     ctx.font = `600 ${fontPx}px ${FONT}`
     for (const id of this.byArea) {
       const p = this.data.provinces[id]
       if (Math.sqrt(p.area) * scale < MIN_PROVINCE_PX) break
-      const pt = map.latLngToContainerPoint([-(p.label[1] - 3), p.label[0] + shift])
-      if (pt.x < -100 || pt.y < -20 || pt.x > size.x + 100 || pt.y > size.y + 20) continue
+      if (cities && p.city) continue
+      const pt = this.anchor(map, p.label, shift)
+      if (!onScreen(pt, size)) continue
       const w = this.measure(p.name, fontPx)
       if (!this.fits(pt, w, fontPx, size, placed)) continue
       this.text(p.name, pt, fontPx, '#231d12', 'rgba(250,246,234,0.88)')
     }
+  }
+
+  /** Dot for a city, double ring for a Doppelstadt, at the province's label point. Never culled by collisions. */
+  private drawCitySymbols(map: L.Map, scale: number, size: L.Point, shift: number) {
+    if (scale < DOUBLE_SYMBOL_SCALE) return
+    const ctx = this.ctx
+    const ink = '#1c160b'
+    for (const id of this.cities) {
+      const p = this.data.provinces[id]
+      if (p.city === 1 && scale < CITY_SYMBOL_SCALE) break // sorted: Doppelstädte first
+      const pt = this.anchor(map, p.label, shift)
+      if (!onScreen(pt, size)) continue
+      const r = symbolRadius(p.city, scale)
+      ctx.beginPath()
+      ctx.arc(pt.x, pt.y, r + 1.5, 0, Math.PI * 2)
+      ctx.fillStyle = 'rgba(250,246,234,0.95)'
+      ctx.fill()
+      ctx.fillStyle = ink
+      ctx.beginPath()
+      if (p.city === 2) {
+        ctx.arc(pt.x, pt.y, r - 0.9, 0, Math.PI * 2)
+        ctx.lineWidth = 1.8
+        ctx.strokeStyle = ink
+        ctx.stroke()
+        ctx.beginPath()
+        ctx.arc(pt.x, pt.y, r * 0.42, 0, Math.PI * 2)
+      } else ctx.arc(pt.x, pt.y, r, 0, Math.PI * 2)
+      ctx.fill()
+    }
+  }
+
+  /** Screen position of a province's label point (the SVG text baseline sits a little below the centre). */
+  private anchor(map: L.Map, label: [number, number], shift: number): L.Point {
+    return map.latLngToContainerPoint([-(label[1] - 3), label[0] + shift])
   }
 
   private text(s: string, pt: L.Point, fontPx: number, fill: string, halo: string) {
@@ -139,8 +215,8 @@ export class LabelLayer extends L.Layer {
     ctx.fillText(s, pt.x, pt.y)
   }
 
-  private measure(s: string, fontPx: number): number {
-    const key = `${fontPx}|${s}`
+  private measure(s: string, fontPx: number, weight = 600): number {
+    const key = `${weight}|${fontPx}|${s}`
     let w = this.widthCache.get(key)
     if (w === undefined) this.widthCache.set(key, (w = this.ctx.measureText(s).width))
     return w
@@ -166,6 +242,9 @@ export class LabelLayer extends L.Layer {
     return true
   }
 }
+
+const onScreen = (pt: L.Point, size: L.Point) => pt.x > -100 && pt.y > -20 && pt.x < size.x + 100 && pt.y < size.y + 20
+const symbolRadius = (city: number, scale: number) => (city === 2 ? 6 : 3.5) * (scale < NATION_MODE_SCALE ? 0.7 : scale >= 1 ? 1.15 : 1)
 
 const FONT = '"Segoe UI", system-ui, -apple-system, sans-serif'
 const SERIF = 'Georgia, "Times New Roman", serif'
