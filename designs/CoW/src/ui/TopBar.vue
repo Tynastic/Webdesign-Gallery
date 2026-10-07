@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { CircleHelp, Cloud, CloudOff, Download, ImageDown, LoaderCircle, MessageSquareText, Redo2, Share2, Undo2, Upload } from 'lucide-vue-next'
+import { CircleHelp, Cloud, CloudOff, Download, ImageDown, LoaderCircle, MessageSquareText, Redo2, Undo2, Upload } from 'lucide-vue-next'
 import { computed, nextTick, onBeforeUnmount, ref, shallowRef } from 'vue'
 import { displayName, exportPlan, ImportError, importPlan, LOCAL_ORIGIN, type PlanSnapshot } from '../../shared/schema'
 import { useUndoState } from '../composables/useY'
@@ -8,8 +8,8 @@ import { downloadBlob, exportMapImage } from '../render/exportImage'
 import { confirmAction, toast } from '../state/feedback'
 import { session } from '../state/session'
 import type { Peer } from '../sync/presence'
-import { roomUrl } from '../sync/rooms'
 import { usePlanner } from './context'
+import RoomMenu from './RoomMenu.vue'
 import SearchBox from './SearchBox.vue'
 import { toolLabel } from './toolCatalog'
 
@@ -47,16 +47,6 @@ const statusInfo = computed(() =>
     denied: { icon: CloudOff, text: t('conn.offline'), title: t('room.gone') },
   })[status.value],
 )
-
-async function share() {
-  const url = roomUrl(handle.room)
-  try {
-    await navigator.clipboard.writeText(url)
-    toast(t('top.linkCopied'))
-  } catch {
-    window.prompt(t('top.copyPrompt'), url)
-  }
-}
 
 // ---------- file ----------
 const exporting = ref(false)
@@ -162,7 +152,7 @@ async function importFile(e: Event) {
           {{ initials(p.state.user.name) }}
         </button>
         <span v-if="peers.length > 6" class="avatar more">+{{ peers.length - 6 }}</span>
-        <button class="btn share" :title="t('top.shareTitle')" @click="share"><Share2 :size="15" />{{ t('top.share') }}</button>
+        <RoomMenu />
       </div>
       <button class="me-chip" :title="t('top.identity')" @click="$emit('identity')">{{ meName }}</button>
       <div class="btn-group" role="group" :aria-label="t('top.history')">

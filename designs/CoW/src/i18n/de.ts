@@ -79,7 +79,7 @@ export const de: Messages = {
   'top.peerAria': '{name}, zum Mauszeiger springen',
   'top.viewing': 'schaut zu',
   'top.noCursor': '{name} zeigt gerade nicht auf die Karte.',
-  'top.share': 'Teilen',
+  'top.roomTitle': 'Raum-Link, Zugang und Einstellungen',
   'top.shareTitle': 'Raum-Link kopieren',
   'top.linkCopied': 'Raum-Link kopiert. Teile ihn mit deiner Koalition (und das Passwort, falls der Raum eins hat).',
   'top.copyPrompt': 'Kopiere diesen Raum-Link:',
@@ -369,6 +369,7 @@ export const de: Messages = {
 
   // ---------- Ansicht ----------
   'panel.view': 'Ansicht',
+  'view.menuTitle': 'Kartenansicht: Nationalfarben, Grenzen, Beschriftung, Sprache',
   'view.language': 'Sprache',
   'view.colours': 'Nationalfarben',
   'view.coloursHint': 'gedämpft hebt die Pläne hervor',

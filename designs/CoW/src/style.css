@@ -192,8 +192,20 @@ kbd {
 .icon-pick-btn:hover { border-color: var(--line-strong); }
 .icon-pick-btn[aria-checked='true'] { border-color: var(--accent); background: var(--surface-3); }
 
+/* Bottom-left corner of the map: the View menu, then the status line. */
+.map-dock {
+  position: absolute; z-index: 1000; left: 12px; bottom: 12px; display: flex; align-items: center; gap: 8px;
+  max-width: min(720px, calc(100% - 100px)); pointer-events: none;
+}
+.map-dock > .menu { pointer-events: auto; }
+.map-btn {
+  display: inline-flex; align-items: center; gap: 7px; height: 34px; padding: 0 10px; flex: none;
+  font-size: 13px; font-weight: 600; color: var(--text-2);
+  background: rgb(26 30 22 / 0.94); border: 1px solid var(--line-strong); border-radius: var(--r); box-shadow: var(--shadow); backdrop-filter: blur(6px);
+}
+.map-btn:hover { color: var(--text); border-color: var(--accent); }
 .statusbar {
-  position: absolute; z-index: 900; left: 12px; bottom: 12px; max-width: min(620px, calc(100% - 100px));
+  min-width: 0;
   padding: 6px 12px; font-size: 12.5px; color: var(--text-2); pointer-events: none;
   background: rgb(18 21 16 / 0.86); border: 1px solid var(--line); border-radius: var(--r-sm); backdrop-filter: blur(4px);
 }
@@ -332,6 +344,24 @@ kbd {
 .toggle input:checked + .toggle-track::after { transform: translateX(14px); background: var(--accent-ink); }
 .toggle input:focus-visible + .toggle-track { outline: 2px solid var(--focus); outline-offset: 2px; }
 
+/* ---------- menus (button + floating panel) ---------- */
+.menu { position: relative; flex: none; }
+.menu-btn[aria-expanded='true'] { border-color: var(--accent); color: var(--text); }
+.menu-chev { color: var(--muted); transition: transform 0.15s; }
+.menu-btn[aria-expanded='true'] .menu-chev { transform: rotate(180deg); }
+.menu-panel {
+  position: absolute; z-index: 1150; width: 300px; max-width: calc(100vw - 24px); padding: 4px 16px 16px;
+  background: var(--surface); border: 1px solid var(--line-strong); border-radius: var(--r); box-shadow: var(--shadow);
+}
+.menu-panel.below-end { top: calc(100% + 8px); right: 0; }
+.menu-panel.above-start { bottom: calc(100% + 8px); left: 0; }
+.menu-title { margin: 0; padding: 10px 0; font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+.menu-foot { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); }
+.menu-panel .fine { margin: 4px 0 8px; }
+.menu-foot .btn { margin-top: 4px; }
+.room-copy { width: 100%; justify-content: center; margin-top: 8px; }
+.menu-panel > :last-child { margin-bottom: 0; }
+
 /* ---------- dialogs ---------- */
 .dialog {
   padding: 20px 22px; max-width: min(760px, calc(100vw - 32px)); color: var(--text);
@@ -431,7 +461,8 @@ a.brand { color: inherit; text-decoration: none; }
 }
 .avatar:hover { box-shadow: 0 0 0 2px var(--text); }
 .avatar.more { color: var(--text-2); background: var(--surface-3); font-size: 10px; }
-.btn.share { height: 30px; margin-left: 4px; }
+.room-menu { margin-left: 4px; }
+.room-menu .btn { height: 30px; }
 .me-chip {
   max-width: 180px; height: 30px; padding: 0 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   font-size: 12.5px; font-weight: 600; background: var(--bg); border: 1px solid var(--line); border-radius: 15px; color: var(--text-2);
@@ -609,8 +640,10 @@ body:has(.legal), body:has(.lobby) { overflow-y: auto; }
   .brand-name, .file-group, .conn, .me-chip, .plan-title { display: none; }
   .presence .avatar:nth-child(n + 4) { display: none; }
   .search { flex: 1; }
-  .statusbar { display: none; }
-  .stage:has(.statusbar) .phase-bar { left: 12px; right: auto; }
+  .statusbar, .menu-btn-label, .map-btn .menu-chev { display: none; }
+  .room-menu .btn { gap: 4px; padding: 0 8px; }
+  .stage:has(.statusbar) .phase-bar { left: 60px; right: auto; }
+  .menu-panel.below-end { position: fixed; top: 60px; left: 12px; right: 12px; width: auto; max-width: none; }
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition: none !important; animation: none !important; }

@@ -12,8 +12,9 @@ test('German by default, switchable to English without reload', async ({ page })
   await expect(page.locator('.statusbar')).toContainText('Objekt oder Provinz anklicken')
   await expect(page.locator('.nation-sub').first()).toContainText('Deutschland')
 
-  // Switch in the View panel: UI, nation names and status hint follow immediately.
-  await page.click('.panel:has(#ph-map-style) [role=radio]:has-text("English")')
+  // Switch in the map's View menu: UI, nation names and status hint follow immediately.
+  await page.click('.view-menu .menu-btn')
+  await page.click('.view-menu [role=radio]:has-text("English")')
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
   await expect(page.locator('.statusbar')).toContainText('Click an object or province')
   await expect(page.locator('.nation-sub').first()).toContainText('Germany')

@@ -56,6 +56,7 @@ The map is drawn by our own canvas layers (`src/map/baseLayer.ts`, `markLayer.ts
    - The options bar appears only for tools that have options.
    - The inspector shows only fields relevant to the selected object.
    - Sidebar sections can be collapsed and remember their state.
+   - Each piece of chrome sits where its job is. The sidebar holds only information and planning (Details, Nations, Layers). Room facts (link, access, expiry, delete) live in the **Room** menu in the top bar. How the map is drawn (nation colours, borders, labels) and the language live in the **View** menu in the map's bottom-left corner. Both menus close on Esc or a click outside.
 9. **Help users recover from errors**
    - Hints explain what's missing ("A zone needs at least 3 points").
    - Failed imports say why.
@@ -85,7 +86,7 @@ The map is drawn by our own canvas layers (`src/map/baseLayer.ts`, `markLayer.ts
 
 ## Language
 
-German is the default (the coalition's language), and English is one click away in the lobby and in the View panel.
+German is the default (the coalition's language), and English can be picked in the lobby and in the map's View menu (bottom left).
 
 - **Natural German.** Translations read naturally rather than word for word. They use informal "du" as the Call of War community does, German key names (Strg, Entf, Umschalt, Leertaste), German nation names, and localised relative times ("vor 5 Minuten").
 - **Live switching.** Changing the language re-renders everything at once: panels, tooltips, map nation labels and the status hint. There's no reload and you keep your place.

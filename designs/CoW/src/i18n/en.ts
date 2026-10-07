@@ -77,7 +77,7 @@ export const en = {
   'top.peerAria': '{name}, go to their cursor',
   'top.viewing': 'viewing',
   'top.noCursor': "{name} isn't pointing at the map right now.",
-  'top.share': 'Share',
+  'top.roomTitle': 'Room link, access and settings',
   'top.shareTitle': 'Copy the room link',
   'top.linkCopied': 'Room link copied. Share it with your coalition (and the password, if the room has one).',
   'top.copyPrompt': 'Copy this room link:',
@@ -367,6 +367,7 @@ export const en = {
 
   // ---------- view ----------
   'panel.view': 'View',
+  'view.menuTitle': 'Map view: nation colours, borders, labels, language',
   'view.language': 'Language',
   'view.colours': 'Nation colours',
   'view.coloursHint': 'muted lets plans stand out',

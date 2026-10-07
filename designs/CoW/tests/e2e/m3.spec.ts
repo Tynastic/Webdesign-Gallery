@@ -53,8 +53,11 @@ test('follow a teammate, then the owner deletes the room for everyone', async ({
   await expect(b.locator('.follow-banner')).toHaveCount(0)
 
   // Only the creator sees "Delete room"; deleting kicks everyone out.
-  await expect(b.locator('.panel button:has-text("Raum löschen")')).toHaveCount(0)
-  await a.click('.panel button:has-text("Raum löschen")')
+  await b.click('.room-menu .menu-btn')
+  await expect(b.locator('.room-menu .menu-panel')).toContainText('Link kopieren')
+  await expect(b.locator('.room-menu button:has-text("Raum löschen")')).toHaveCount(0)
+  await a.click('.room-menu .menu-btn')
+  await a.click('.room-menu button:has-text("Raum löschen")')
   await a.click('dialog.confirm .btn.danger')
   await a.waitForURL((url) => url.pathname === '/')
   await expect(b.locator('.gone-overlay')).toBeVisible({ timeout: 15_000 })

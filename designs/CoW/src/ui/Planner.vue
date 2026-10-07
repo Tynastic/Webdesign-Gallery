@@ -17,10 +17,9 @@ import HelpDialog from './HelpDialog.vue'
 import Inspector from './Inspector.vue'
 import JoinDialog from './JoinDialog.vue'
 import LayersPanel from './LayersPanel.vue'
-import ViewPanel from './ViewPanel.vue'
+import MapViewMenu from './MapViewMenu.vue'
 import NationsPanel from './NationsPanel.vue'
 import PhaseBar from './PhaseBar.vue'
-import RoomPanel from './RoomPanel.vue'
 import Toasts from './Toasts.vue'
 import { TOOL_BY_KEY, toolLabel } from './toolCatalog'
 import Toolbar from './Toolbar.vue'
@@ -188,7 +187,10 @@ const meName = () => (session.me ? displayName(roster.value.get(session.me), pro
       <div ref="mapEl" class="map" role="application" :aria-label="t('planner.map')" />
       <ToolOptions />
       <PhaseBar />
-      <div class="statusbar" role="status" aria-live="polite">{{ tm(session.hint) || t('status.ready') }}</div>
+      <div class="map-dock">
+        <MapViewMenu />
+        <div class="statusbar" role="status" aria-live="polite">{{ tm(session.hint) || t('status.ready') }}</div>
+      </div>
       <Toasts />
       <div v-if="session.following !== null && followedName" class="follow-banner" role="status">
         <Eye :size="15" />{{ t('follow.banner', { name: followedName }) }}
@@ -203,10 +205,8 @@ const meName = () => (session.me ? displayName(roster.value.get(session.me), pro
 
     <aside class="sidebar" :aria-label="t('planner.panels')">
       <Inspector />
-      <RoomPanel v-if="room !== 'local'" />
       <NationsPanel />
       <LayersPanel />
-      <ViewPanel />
     </aside>
 
     <HelpDialog v-model:open="helpOpen" />

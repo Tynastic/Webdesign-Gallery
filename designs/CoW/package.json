@@ -28,7 +28,7 @@
     "@types/leaflet": "^1.9.22",
     "@types/node": "^26.6.4",
     "@vitejs/plugin-vue": "^6.0.9",
-    "concurrently": "^10.0.5",
+    "concurrently": "^9.2.1",
     "fast-xml-parser": "^5.11.2",
     "fuse.js": "^7.5.0",
     "html-to-image": "^1.11.13",
@@ -45,5 +45,8 @@
   },
   "engines": {
     "node": ">=22.18"
+  },
+  "overrides": {
+    "shell-quote": "^1.10.0"
   }
 }
