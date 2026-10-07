@@ -86,7 +86,7 @@ export class PlannerMap {
       attributionControl: false,
       zoomControl: false,
       boxZoom: false,
-      // Long-press fires 'contextmenu' on touch screens too (reserved for mobile ping/erase, see PLAN.md M4).
+      // Long-press fires 'contextmenu' on touch screens too (reserved for mobile ping/erase, see DEVELOPMENT.md, M4).
       tapHold: true,
     })
     this.zoomControl = L.control.zoom({ position: 'bottomright', zoomInTitle: `${t('map.zoomIn')} (+)`, zoomOutTitle: `${t('map.zoomOut')} (−)` }).addTo(this.map)

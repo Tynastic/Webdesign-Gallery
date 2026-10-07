@@ -13,7 +13,7 @@ The map is drawn by our own canvas layers (`src/map/baseLayer.ts`, `markLayer.ts
 | Land | Nation colours **muted by default** (mixed 55% toward paper). Vivid and Off are one click away | Figure/ground: the base map recedes so player plans stand out |
 | Borders | Three tiers: province (thin, fades out when zoomed far out), nation (dashed over a light underline), coast | Visual hierarchy: you can always tell which provinces belong together |
 | Labels | Nation names in letterspaced serif caps when zoomed out, city names in sans with a paper halo when zoomed in, packed without overlaps | Atlas convention. Labels stay readable on any fill |
-| Player assignments | Tint, diagonal hatching that stays the same size on screen, and an inner outline in the player's colour | Readable even over a same-hued nation, and distinct from nation fills |
+| Planned conquests | Tint, diagonal hatching that stays the same size on screen, and an inner outline in the nation's marker colour; a dashed outline once conquered | Readable even over a same-hued nation, and distinct from nation fills |
 | Drawings | Tapered spline arrows with a broad head, barbed or double front lines, dashed zones, NATO-style unit frames | Uses the visual language players already know from war maps |
 
 ## Usability principles applied
@@ -40,16 +40,16 @@ The map is drawn by our own canvas layers (`src/map/baseLayer.ts`, `markLayer.ts
    - Pickers share the same segmented-control and swatch components.
 5. **Error prevention**
    - Drags pan and clicks draw, so you never draw by accident while panning.
-   - Destructive actions that cascade (removing a player with provinces, a layer with drawings, a used phase, importing over a plan) ask for confirmation, with the focus on *Cancel*.
+   - Destructive actions that cascade (removing a nation with planned conquests, a layer with drawings, a used phase, importing over a plan) ask for confirmation, with the focus on *Cancel*.
    - Objects can be locked.
    - The last layer can't be deleted.
 6. **Recognition rather than recall**
    - Icons show their name, shortcut and a one-line explanation on hover.
-   - The keys for picking a player in assign mode are printed on the chips.
+   - The keys for picking a nation while planning conquests are printed on the chips.
    - The empty inspector lists the most useful shortcuts.
    - The tooltip on a province shows who it's assigned to.
 7. **Flexibility and efficiency of use**
-   - Single-key tool switching, number keys to pick a player, and `[` `]` to step through phases.
+   - Single-key tool switching, number keys to pick a nation, and `[` `]` to step through phases.
    - Drag-painting, and Shift+click to paint a whole nation.
    - Holding Space pans while painting.
 8. **Aesthetic and minimalist design**
@@ -69,7 +69,7 @@ The map is drawn by our own canvas layers (`src/map/baseLayer.ts`, `markLayer.ts
   - 40 px tool buttons sit in a fixed rail right next to the map, close to where the pointer works.
   - Common actions also have keyboard shortcuts.
 - **Hick's law and Gestalt grouping**
-  - The 9 tools are split into 4 groups with separators: select · assign · lines/areas · markers.
+  - The 12 tools are split into 5 groups with separators: select · conquests · lines/areas · markers · measure/ping.
 - **Progressive disclosure**
   - Advanced options (thickness, phase, layer, lock) live in the inspector, not on the toolbar.
 - **WYSIWYG feedback**
@@ -97,7 +97,7 @@ Call of War's world is round, so the planner's is too. Panning past the Pacific 
 - **Continuous background.** The ocean shading is vertical and the grid divides the world width evenly, so nothing marks the seam.
 - **Short way round.** Search and zoom-to flights choose the nearest copy, so going from Japan to Alaska crosses the Pacific instead of the whole map.
 
-## Collaboration (M2)
+## Collaboration
 
 - **Status at a glance.** A chip next to the title always shows *Live*, *Connecting…*, *Offline* or *Offline plan*, and its tooltip says what that means for your edits. Being offline is never an error: you keep working, and changes merge when the connection returns.
 - **Who's here.** Avatars in the top bar show everyone in the room, coloured by their nation. The tooltip names their current tool, and clicking an avatar flies to their cursor. Live cursors carry name tags.
@@ -112,7 +112,7 @@ Call of War's world is round, so the planner's is too. Panning past the Pacific 
   - Importing warns that it replaces the plan for everyone in the room.
   - Removing a nation explains that its planned conquests go while the provinces it holds stay.
 
-## Test phase (M3)
+## Test phase
 
 - **Honest numbers.** Distances are always shown with "≈", and calibration is one click away in the options bar. Range circles speak km, the unit Call of War uses.
 - **Following a teammate.**
@@ -128,7 +128,7 @@ Call of War's world is round, so the planner's is too. Panning past the Pacific 
 
 ## Mobile readiness
 
-Phones are milestone M4 (see PLAN.md), but these choices are already in place:
+Phones are milestone M4 (see [DEVELOPMENT.md](DEVELOPMENT.md#m4-mobile)), but these choices are already in place:
 
 - Pointer-event drags.
 - Taps work as clicks.

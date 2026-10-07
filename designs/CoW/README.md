@@ -1,126 +1,116 @@
 # War Room
 
-A shared strategy map for **Call of War: Supremacy 1942**. Your coalition opens one room and plans together, live:
+A shared strategy map for **Call of War: Supremacy 1942**. Your coalition opens one room and plans together, live, on the real 3,159-province world map:
 
 - **Planned conquests:** who should take which province.
-- **Ownership:** which provinces are already conquered.
-- **Drawings:** attack arrows, fronts, zones and unit markers on the real 3,159-province world map.
+- **Ownership:** which provinces are already conquered. Nation borders and labels follow.
+- **Drawings:** attack arrows, fronts, zones, unit and objective markers, range circles and notes.
 - **Phases:** step through the plan phase by phase.
 
-Built with Vite, TypeScript, Vue 3, Leaflet, Yjs and Hocuspocus. See [PLAN.md](PLAN.md) for the roadmap (including the mobile design) and [DESIGN.md](DESIGN.md) for the visual design and the usability principles behind the interface.
+The interface is German by default; English is one click away. Current version: test version 0.4 (desktop). A phone layout is planned.
 
-## Status
+## Using War Room
 
-| Milestone | Contents | State |
+1. **Create a room** in the lobby, optionally with a password, and share the link with your coalition. **Work offline** opens a plan that lives only in your browser.
+2. **Pick your nation** when you join. The plan's roster lists the nations in your game. A nation gets a **nickname** when a teammate plays it; AI nations keep it empty.
+3. **Plan and draw** with the tools below. Everyone sees changes instantly. Undo (Ctrl+Z) only reverts your own edits.
+
+| Key | Tool | What it does |
 |---|---|---|
-| M0 Map viewer | Province map, hover/select, neighbours, zoom-aware labels, search | ✅ |
-| M1 Planning tools | Planned conquests, arrows, fronts, zones, units, objectives, range circles, text; layers, phases; undo/redo; import/export | ✅ |
-| M2 Real-time | Lobby, rooms and share links, optional passwords, live sync, presence, cursors, pings, nation roster with nicknames, ownership painting | ✅ |
-| M3 Polish and deploy | Measure tool (≈ km, travel time, calibration), range circles in km, follow a player, PNG export, room deletion, feedback and crash reports, legal pages, server limits and hardening, Docker/Caddy | ✅ |
-| M4 Mobile | Bottom sheet, touch gestures, PWA (see PLAN.md) | designed |
+| `V` | Select | Select, move and edit drawings; click a province for its details |
+| `P` | Plan conquests | Hatch provinces in the colour of the nation that should take them. Shift+click paints a whole nation |
+| `C` | Mark as conquered | Record a province's current owner; it takes the conqueror's colour |
+| `A` `F` `Z` | Arrow, front, zone | Attack/move arrows, front lines and areas |
+| `U` `O` `R` `T` | Unit, objective, range, text | Markers, range circles in km, notes |
+| `M` | Measure | Approximate distance in km and travel time |
+| `G` | Ping | Flash a ring on everyone's map (also Alt+click) |
 
-## Getting started
+More: `?` shows all shortcuts. Click a teammate's avatar to follow their view. Export a PNG with a legend for the game chat, or a JSON backup of the plan.
+
+**Distances are estimates.** The game map is a stylised Mercator projection, so distances are within about ±35%. Measure a known distance and click **Calibrate…** to correct the whole plan.
+
+## Running it locally
+
+Needs Node ≥ 22.18.
 
 ```sh
 npm install
-npm run dev          # web on http://localhost:5173 + sync server on :1234
+npm run dev          # http://localhost:5173 (sync server on :1234)
 ```
 
-Open the app, create a room in the lobby and share the link. **Work offline** opens a plan that is stored only in your browser.
+## Deploying
 
-| Script | What it does |
+Two ready-made setups, both with Docker Compose. Details, alternatives and troubleshooting: [DEPLOY.md](DEPLOY.md).
+
+### Option A: your own PC with Docker in WSL (Cloudflare Tunnel)
+
+You don't need port forwarding or a public IP, and HTTPS comes from Cloudflare. In the Ubuntu WSL terminal:
+
+```sh
+sudo apt install docker-compose-v2 docker-buildx       # once
+cd /mnt/c/Users/<you>/Documents/Coding/Webdesign/designs/CoW
+cp .env.example .env
+echo "ADMIN_TOKEN=$(openssl rand -base64 32)" >> .env
+echo "COMPOSE_FILE=docker-compose.tunnel.yml" >> .env  # so plain "docker compose" uses the tunnel setup
+docker compose up -d --build
+docker compose logs tunnel | grep trycloudflare        # your public https://….trycloudflare.com address
+```
+
+Keep in mind:
+
+- The PC must stay on.
+- WSL must keep running. Keep a WSL terminal open, or see [DEPLOY.md](DEPLOY.md#keeping-it-running).
+- The quick-tunnel address changes when the tunnel container restarts. DEPLOY.md shows how to get a stable address.
+
+### Option B: a VPS with your own domain (Caddy)
+
+Point a DNS record at the server, then:
+
+```sh
+cp .env.example .env    # set DOMAIN and ADMIN_TOKEN
+docker compose up -d --build
+```
+
+Caddy obtains the HTTPS certificate automatically.
+
+### Before inviting testers
+
+- **Fill in the legal pages:** replace the yellow placeholders in `server/legal/*.html` (Impressum, Datenschutz). They take effect without a rebuild.
+- **Option A only:** name Cloudflare as a processor in the Datenschutz page.
+
+### Updating after changes
+
+```sh
+docker compose exec app node --no-warnings=ExperimentalWarning scripts/backup.ts   # safety net
+export APP_COMMIT=$(git rev-parse --short HEAD)                                     # shown as the version
+docker compose up -d --build app
+docker compose ps                                                                   # wait for "healthy"
+```
+
+Plans are kept, and browsers reconnect by themselves. Ask testers to reload so they get the new version. The full procedure, including rollback, is in [DEVELOPMENT.md](DEVELOPMENT.md#making-changes).
+
+### Everyday commands
+
+| Command | Purpose |
 |---|---|
-| `npm run dev` | Vite (with `/api` and `/collab` proxied) plus the sync server in watch mode |
-| `npm run build` | Typecheck, static build into `dist/`, then Brotli/gzip precompression |
-| `npm start` | Production: one Node process serves `dist/`, the API and the websocket (Node ≥ 22.18 runs the TypeScript directly) |
-| `npm run backup` | Consistent SQLite backup into `server/data/backups/` |
-| `npm start` | Production: one Node process serves `dist/`, the room API and the websocket |
-| `npm run map:build` | Regenerates `public/data/provinces.json` from `world_map_political.svg` |
-| `npm test` | Unit tests (Vitest): pipeline, plan model, nations and territories, geometry |
-| `npm run test:e2e` | Browser tests (Playwright). Set `E2E_BASE_URL` to test a production build (built with `VITE_E2E=1`) |
+| `docker compose ps` | Are the containers running and healthy? |
+| `docker compose logs -f app` | Follow the server log |
+| `docker compose restart app` | Restart the server (the tunnel URL stays) |
+| `docker compose stop` / `start` | Pause and resume everything |
+| `docker compose down` | Remove the containers; rooms are kept |
 
-The server reads two environment variables: `PORT` (default `1234`) and `DATA_DIR` (default `server/data`, which holds `cow-planner.sqlite`).
+⚠️ Never run `docker compose down -v`. It deletes the data volume with every room.
 
-**Deploying for testers:** see [DEPLOY.md](DEPLOY.md) (Docker Compose with Caddy, HTTPS, backups, reading feedback).
+**Reading feedback.** Testers send feedback from the speech-bubble button, and crashes are reported automatically:
 
-## Measuring
-
-- **Measure (`M`)** shows approximate kilometres and, with a speed set, the travel time ("≈ 860 km · 39 h").
-- **How distances are estimated.** The game map is close to a Mercator projection (fitted from ~20 cities) but stylised, so estimates are within about ±35%.
-- **Calibration.** Measure a known distance (for example from the game's travel display), then click **Calibrate…**. The correction applies to the whole plan and can be undone.
-- **Range circles** show and edit their radius in km.
-
-## Nations, players and conquests
-
-- **Nations and players.** The plan's roster lists the **nations** in your game. A nation gets a **nickname** when a teammate plays it; AI nations keep it empty. Each roster nation has a bright marker colour for its plans.
-- **Who you are.** Everyone picks the nation they play when they join a room. This is remembered per room, and you can change it with the chip in the top bar.
-- **Plan conquests (`P`).** Hatches provinces in the marker colour of the nation that should take them. Once that nation holds a province, the hatch becomes a dashed outline, and the roster shows progress such as `3/7`.
-- **Mark as conquered (`C`).** Records the province's current owner. The province takes the conqueror's map colour, and nation borders and nation labels follow the new territory. You can also do this from the province panel: **Held by**.
-
-## How the plan is stored
-
-Everything shared lives in one Yjs document per room ([shared/schema.ts](shared/schema.ts)): nations, layers, phases, drawings, planned conquests and ownership.
-
-- **Server.** The sync server ([server/index.ts](server/index.ts)) stores each document and the room records in SQLite. Room passwords are scrypt-hashed and checked when a client connects.
-- **Browser cache.** Every client also caches the room in IndexedDB. It opens instantly, keeps working offline, and edits merge when the connection returns.
-- **Undo.** Undo only reverts your own edits.
-- **What isn't shared.** Tool choice, selection, hidden layers and map style are per viewer ([src/state/session.ts](src/state/session.ts)).
-- **Presence.** Cursors, current tools and pings use the Yjs awareness protocol and are never stored ([src/sync/presence.ts](src/sync/presence.ts)).
-
-## Map data
-
-The SVG has no ids. Province `<path>` *i* and city `<text>` *i* are paired by document order, and each fill colour is one 1942 nation. [scripts/build-map-data.ts](scripts/build-map-data.ts) produces the following:
-
-- **`provinces.json`**:
-  - for each province: name, 1942 nation, label point, area, ring and neighbours.
-  - coastlines, plus every land border **tagged with the two provinces it separates**, so the client can redraw nation borders after conquests.
-- **`nations.json`**: maps each colour to a nation name and a unique short code (the nation id in plans). It is seeded from capital cities on the first run and **edited by hand after that**.
-
-## Languages
-
-German is the default; English can be chosen in the lobby (top right) or in the **View** panel. The choice is remembered per browser and switches the whole UI live, without a reload.
-
-- **Messages** live in [src/i18n/en.ts](src/i18n/en.ts), which defines the keys, and [src/i18n/de.ts](src/i18n/de.ts). TypeScript rejects a missing German key, and a unit test checks that both languages use the same placeholders.
-- **`t(key, params)`** fills `{name}` placeholders and picks `one|many` plural forms. Status-bar hints are stored as message keys, so they re-translate when the language changes.
-- **Nation names** come from `nations.json` (`name` in English, `de` in German). They are used on map labels, in pickers and in tooltips, and search finds a nation in either language. City names come from the map file and are not translated.
-- **Names inside a plan** follow the language of whoever created them, for example the default layer ("Allgemein"/"General") or a room title. They're shared data, not UI.
-
-## Wrap-around
-
-The map is a cylinder. Its left edge (Alaska) and right edge (Chukotka) meet at the Bering Strait, so you can pan from Asia across the Pacific to America.
-
-- **Drawing the copies.** Every layer draws the world copies around the view: the canvases, the labels, and plan objects (whose copies are recomputed only when the set of nearby copies changes).
-- **Mid-pan repaints.** Canvases and SVG overlays repaint as soon as a pan leaves the area they cover.
-- **Folding back.** After each move the view folds back into the canonical world (`x ∈ [0, width)`). This is invisible, but it's skipped while a pointer is down, so it never interrupts a drag.
-- **How things are stored.**
-  - New objects are stored with their first point inside the world, so an arrow from Kamchatka to Alaska keeps continuous coordinates across the seam.
-  - Hit-testing, cursors and pings use wrapped coordinates.
-  - Flights, cursors and pings go to the copy nearest the view.
-
-Helpers: [src/map/wrap.ts](src/map/wrap.ts).
-
-## Layout
-
-```
-scripts/build-map-data.ts   SVG -> JSON pipeline
-shared/schema.ts            Yjs plan model + mutation helpers (schema v2)
-server/                     index (Hocuspocus wiring), http (API, static, headers), db (SQLite), limits, config, legal/ templates
-src/map/                    Leaflet + canvas rendering (no Vue)
-  createMap.ts              PlannerMap facade: panes, layers, tools, hover, pointer drags
-  nations.ts                Nation catalogue, current owners, territory labels
-  baseLayer.ts / markLayer.ts / labelLayer.ts / presenceLayer.ts
-src/render/                 Plan objects -> Leaflet layers (arrow geometry, unit/objective icons)
-src/tools/                  select, paint (plan/own), path, place, range, ping
-src/sync/                   planDoc (Y.Doc + IndexedDB + provider + undo), presence, rooms API client
-src/state/                  Per-viewer session state, toasts/confirm
-src/ui/                     Vue components (Lobby, Planner, panels, dialogs)
-tests/                      Vitest unit tests, tests/e2e Playwright
+```sh
+curl -s https://<address>/api/admin/feedback -H "Authorization: Bearer <ADMIN_TOKEN>"
 ```
 
-## Notes
+## Documentation
 
-- The app was called *CoW Planner* before. The internal storage keys (`cow-planner.*` in localStorage and the IndexedDB names) and the export-file id `app: "cow-planner"` keep the old name on purpose, so existing local plans and older export files keep working.
-- TypeScript is pinned to 5.9 because `vue-tsc` does not support TypeScript 7 yet.
-- `node:sqlite` needs Node 22.5 or newer. The scripts silence its "experimental" warning.
-- Plans saved with schema v1 lose their player assignments: v1 players had no nation, so they can't be mapped. Drawings are kept.
-- Dev builds expose `window.__cow` (planner, plan, session, presence) for debugging and the e2e tests.
+| File | Contents |
+|---|---|
+| [DEPLOY.md](DEPLOY.md) | Hosting options, operations, backups, configuration, security measures |
+| [DEVELOPMENT.md](DEVELOPMENT.md) | Workflow, scripts, tests, architecture, technical notes, roadmap |
+| [DESIGN.md](DESIGN.md) | Visual design and the usability principles behind the interface |
