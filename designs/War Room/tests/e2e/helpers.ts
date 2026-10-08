@@ -1,4 +1,4 @@
-import type { Page } from '@playwright/test'
+import type { APIRequestContext, Page } from '@playwright/test'
 
 type Cow = {
   plan: { objects: Map<string, unknown>; assignments: Map<string, unknown>; ownership: Map<string, unknown>; nations: Map<string, unknown> }
@@ -9,6 +9,17 @@ export const counts = (page: Page) =>
   page.evaluate(() => {
     const { plan } = (window as unknown as { __cow: Cow }).__cow
     return { objects: plan.objects.size, planned: plan.assignments.size, owned: plan.ownership.size, nations: plan.nations.size }
+  })
+
+/** Delete a room a test created, so test rooms don't pile up in the lobby of the dev server. */
+export const removeRoom = (request: APIRequestContext, id: string, ownerToken: string) =>
+  request.delete(`/api/rooms/${id}`, { headers: { Authorization: `Bearer ${ownerToken}` } })
+
+/** Same, for the room this page created through the lobby (its owner token is in the page's storage). */
+export const removeOwnRoom = (page: Page) =>
+  page.evaluate(async () => {
+    const id = location.pathname.split('/').pop()!
+    await fetch(`/api/rooms/${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${localStorage.getItem(`cow-planner.owner.${id}`)}` } })
   })
 
 /** Answer "Which nation do you play?". */

@@ -1,9 +1,8 @@
 <script setup lang="ts">
-import { ArrowRight, CloudOff, LogIn, Plus, X } from 'lucide-vue-next'
-import { computed, ref } from 'vue'
+import { ArrowRight, CloudOff, LayoutList, Lock, LogIn, Plus, Search } from 'lucide-vue-next'
+import { computed, onMounted, ref } from 'vue'
 import { LOCALES, locale, t } from '../i18n'
-import { createRoom, forgetRoom, recentRooms, roomIdFromInput, storePassword } from '../sync/rooms'
-import FeedbackDialog from './FeedbackDialog.vue'
+import { createRoom, listRooms, recentRooms, roomIdFromInput, storePassword, type RoomSummary } from '../sync/rooms'
 import Segmented from './Segmented.vue'
 import Toasts from './Toasts.vue'
 
@@ -12,9 +11,8 @@ const password = ref('')
 const creating = ref(false)
 const createError = ref('')
 const link = ref('')
-const recent = ref(recentRooms())
+const recent = recentRooms()
 const linkId = computed(() => roomIdFromInput(link.value))
-const feedbackOpen = ref(false)
 const version = __APP_VERSION__
 
 async function create() {
@@ -34,10 +32,38 @@ function join() {
   if (linkId.value) location.assign(`/r/${linkId.value}`)
 }
 
-function forget(id: string) {
-  forgetRoom(id)
-  recent.value = recentRooms()
+// ---------- every room on the server ----------
+/** null while loading; 'offline' when the server can't be reached (then only this browser's recent rooms are shown). */
+const rooms = ref<RoomSummary[] | 'offline' | null>(null)
+const filter = ref('')
+const visited = new Map(recent.map((r) => [r.id, r.openedAt]))
+
+onMounted(async () => {
+  rooms.value = (await listRooms()) ?? 'offline'
+})
+
+interface RoomRow {
+  id: string
+  title: string
+  protected: boolean
+  /** Last activity: last edit on the server, or when this browser last opened it (offline). */
+  activeAt: number
+  online: number
+  visitedAt?: number
 }
+
+const rows = computed<RoomRow[]>(() => {
+  const list: RoomRow[] =
+    rooms.value === 'offline'
+      ? recent.map((r) => ({ id: r.id, title: r.title, protected: false, activeAt: r.openedAt, online: 0, visitedAt: r.openedAt }))
+      : (rooms.value ?? []).map((r) => ({ id: r.id, title: r.title, protected: r.protected, activeAt: r.updatedAt, online: r.online, visitedAt: visited.get(r.id) }))
+  // Rooms with people in them first, then by last activity (the server's order).
+  return list.sort((a, b) => Number(b.online > 0) - Number(a.online > 0))
+})
+const shown = computed(() => {
+  const q = filter.value.trim().toLocaleLowerCase()
+  return q ? rows.value.filter((r) => (r.title || t('plan.untitled')).toLocaleLowerCase().includes(q)) : rows.value
+})
 
 /** "5 minutes ago" / "vor 5 Minuten" in the current language. */
 function ago(time: number) {
@@ -84,30 +110,45 @@ function ago(time: number) {
           <button class="btn big" type="submit" :disabled="!linkId">{{ t('lobby.joinButton') }}</button>
         </form>
 
-        <section v-if="recent.length" class="lobby-card">
-          <h2>{{ t('lobby.recent') }}</h2>
-          <ul class="recent">
-            <li v-for="r in recent" :key="r.id">
-              <a :href="`/r/${r.id}`">
-                <strong>{{ r.title || t('plan.untitled') }}</strong>
-                <small class="muted">{{ ago(r.openedAt) }}</small>
-              </a>
-              <button class="icon-btn" :aria-label="t('lobby.forgetAria', { title: r.title })" :title="t('lobby.forget')" @click="forget(r.id)"><X :size="16" /></button>
-            </li>
-          </ul>
-        </section>
-
         <a class="lobby-offline" href="/local"><CloudOff :size="16" />{{ t('lobby.offline') }}</a>
       </div>
+
+      <section class="lobby-card lobby-rooms" aria-labelledby="rooms-title">
+        <div class="rooms-head">
+          <h2 id="rooms-title"><LayoutList :size="18" />{{ rooms === 'offline' ? t('lobby.recent') : t('lobby.rooms') }}</h2>
+          <span v-if="rows.length" class="badge">{{ rows.length }}</span>
+          <label v-if="rows.length > 6" class="rooms-filter">
+            <Search :size="15" />
+            <input v-model="filter" type="search" :placeholder="t('lobby.filter')" :aria-label="t('lobby.filter')" autocomplete="off" />
+          </label>
+        </div>
+        <p v-if="rooms === 'offline'" class="muted fine">{{ t('lobby.roomsOffline') }}</p>
+        <p v-if="rooms === null" class="muted">{{ t('lobby.roomsLoading') }}</p>
+        <p v-else-if="!rows.length" class="muted">{{ t('lobby.roomsEmpty') }}</p>
+        <p v-else-if="!shown.length" class="muted">{{ t('lobby.noMatch', { q: filter.trim() }) }}</p>
+        <ul v-else class="rooms">
+          <li v-for="r in shown" :key="r.id">
+            <a :href="`/r/${r.id}`" class="room-row" :class="{ live: r.online }">
+              <span class="room-title">
+                <Lock v-if="r.protected" :size="14" class="room-lock" :aria-label="t('lobby.protected')" />
+                <strong>{{ r.title || t('plan.untitled') }}</strong>
+              </span>
+              <span class="room-meta">
+                <span v-if="r.online" class="room-online"><span class="live-dot" />{{ t('lobby.online', { n: r.online }) }}</span>
+                <span v-if="r.visitedAt" class="tag">{{ t('lobby.visited') }}</span>
+                <small class="muted" :title="new Date(r.activeAt).toLocaleString(locale)">{{ t('lobby.active', { ago: ago(r.activeAt) }) }}</small>
+              </span>
+            </a>
+          </li>
+        </ul>
+      </section>
     </div>
 
     <footer class="lobby-foot">
       <span class="beta">{{ t('beta.badge') }} {{ version }}</span>
-      <button class="link-btn" @click="feedbackOpen = true">{{ t('top.feedback') }}</button>
       <a href="/impressum">{{ t('legal.impressum') }}</a>
       <a href="/datenschutz">{{ t('legal.privacy') }}</a>
     </footer>
-    <FeedbackDialog v-model:open="feedbackOpen" />
     <div class="lobby-toasts"><Toasts /></div>
   </main>
 </template>

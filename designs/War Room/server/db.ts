@@ -1,4 +1,4 @@
-/** SQLite storage (node:sqlite, no native modules): rooms, Yjs documents, feedback, client errors. */
+/** SQLite storage (node:sqlite, no native modules): rooms, Yjs documents, client errors. */
 import { createHash, randomBytes, scryptSync, timingSafeEqual } from 'node:crypto'
 import { mkdirSync } from 'node:fs'
 import { join } from 'node:path'
@@ -21,18 +21,6 @@ db.exec(`
     name TEXT PRIMARY KEY,
     data BLOB NOT NULL,
     updated_at INTEGER NOT NULL
-  );
-  CREATE TABLE IF NOT EXISTS feedback (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    created_at INTEGER NOT NULL,
-    kind TEXT NOT NULL,
-    message TEXT NOT NULL,
-    contact TEXT,
-    room TEXT,
-    path TEXT,
-    locale TEXT,
-    user_agent TEXT,
-    app_version TEXT
   );
   CREATE TABLE IF NOT EXISTS client_errors (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -58,13 +46,13 @@ const q = {
     'INSERT INTO documents (name, data, updated_at) VALUES (?, ?, ?) ON CONFLICT(name) DO UPDATE SET data = excluded.data, updated_at = excluded.updated_at',
   ),
   deleteDoc: db.prepare('DELETE FROM documents WHERE name = ?'),
+  listRooms: db.prepare(`
+    SELECT r.id, r.title, r.password_hash IS NOT NULL AS protected, r.created_at, COALESCE(d.updated_at, r.created_at) AS updated_at
+    FROM rooms r LEFT JOIN documents d ON d.name = r.id
+    ORDER BY updated_at DESC LIMIT ?`),
   staleRooms: db.prepare(`
     SELECT r.id FROM rooms r LEFT JOIN documents d ON d.name = r.id
     WHERE COALESCE(d.updated_at, r.created_at) < ?`),
-  insertFeedback: db.prepare(
-    'INSERT INTO feedback (created_at, kind, message, contact, room, path, locale, user_agent, app_version) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-  ),
-  listFeedback: db.prepare('SELECT * FROM feedback ORDER BY id DESC LIMIT ?'),
   insertError: db.prepare('INSERT INTO client_errors (created_at, message, stack, path, user_agent, app_version) VALUES (?, ?, ?, ?, ?, ?)'),
   trimErrors: db.prepare('DELETE FROM client_errors WHERE id <= (SELECT MAX(id) - 5000 FROM client_errors)'),
   listErrors: db.prepare('SELECT * FROM client_errors ORDER BY id DESC LIMIT ?'),
@@ -72,7 +60,6 @@ const q = {
     SELECT (SELECT COUNT(*) FROM rooms) AS rooms,
            (SELECT COUNT(*) FROM documents) AS documents,
            (SELECT COALESCE(SUM(LENGTH(data)), 0) FROM documents) AS document_bytes,
-           (SELECT COUNT(*) FROM feedback) AS feedback,
            (SELECT COUNT(*) FROM client_errors) AS client_errors`),
 }
 
@@ -122,6 +109,17 @@ export function deleteRoom(id: string) {
   q.deleteDoc.run(id)
 }
 
+export interface RoomSummary {
+  id: string
+  title: string
+  protected: number
+  created_at: number
+  updated_at: number
+}
+
+/** Every room, most recently edited first. */
+export const listRooms = (limit = 500) => q.listRooms.all(limit) as unknown as RoomSummary[]
+
 /** Rooms with no edits (or never opened) for `days` days. */
 export function staleRoomIds(days: number): string[] {
   return (q.staleRooms.all(Date.now() - days * 86_400_000) as { id: string }[]).map((r) => r.id)
@@ -138,28 +136,12 @@ export function storeDocument(name: string, state: Uint8Array) {
   q.putDoc.run(name, state, Date.now())
 }
 
-// ---------- feedback & errors ----------
-
-export interface FeedbackInput {
-  kind: string
-  message: string
-  contact: string
-  room: string
-  path: string
-  locale: string
-  userAgent: string
-  appVersion: string
-}
-
-export function saveFeedback(f: FeedbackInput) {
-  q.insertFeedback.run(Date.now(), f.kind, f.message, f.contact || null, f.room || null, f.path, f.locale, f.userAgent, f.appVersion)
-}
+// ---------- crash reports ----------
 
 export function saveClientError(e: { message: string; stack: string; path: string; userAgent: string; appVersion: string }) {
   q.insertError.run(Date.now(), e.message, e.stack || null, e.path, e.userAgent, e.appVersion)
   q.trimErrors.run()
 }
 
-export const listFeedback = (limit = 200) => q.listFeedback.all(limit)
 export const listClientErrors = (limit = 200) => q.listErrors.all(limit)
 export const stats = () => q.stats.get()

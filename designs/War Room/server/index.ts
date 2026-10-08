@@ -2,11 +2,12 @@
  * War Room sync server (Call of War planner).
  *
  *   ws   /collab                 Hocuspocus (Yjs) sync + awareness for every room
+ *   GET  /api/rooms              every room { id, title, protected, createdAt, updatedAt, online } for the lobby
  *   POST /api/rooms              create a room { title, password? } -> { id, ownerToken }
  *   GET  /api/rooms/:id          { exists, protected, title }
  *   DELETE /api/rooms/:id        owner only (Authorization: Bearer <ownerToken>)
- *   POST /api/feedback           tester feedback; POST /api/client-errors: crash reports
- *   GET  /api/admin/*            feedback, errors, stats (Authorization: Bearer $ADMIN_TOKEN)
+ *   POST /api/client-errors      crash reports
+ *   GET  /api/admin/*            errors, stats (Authorization: Bearer $ADMIN_TOKEN)
  *   GET  /healthz, /robots.txt, /api/legal/:page, and the built client (dist/)
  *
  * Runs directly on Node ≥ 22.18 (native TypeScript stripping), no build step.
@@ -16,7 +17,7 @@ import { Server } from '@hocuspocus/server'
 import { existsSync } from 'node:fs'
 import { config } from './config.ts'
 import { db, deleteRoom, findRoom, loadDocument, staleRoomIds, storeDocument, checkPassword } from './db.ts'
-import { handleRequest, setRoomDeletedHandler } from './http.ts'
+import { handleRequest, setOnlineCounter, setRoomDeletedHandler } from './http.ts'
 import { clientIp, limiters } from './limits.ts'
 
 const server = new Server({
@@ -73,6 +74,7 @@ function evict(id: string) {
   server.hocuspocus.closeConnections(id)
 }
 setRoomDeletedHandler(evict)
+setOnlineCounter((id) => server.hocuspocus.documents.get(id)?.getConnectionsCount() ?? 0)
 
 /** Delete rooms nobody has touched for ROOM_TTL_DAYS (daily, and at start-up). */
 function cleanup() {

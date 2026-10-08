@@ -1,5 +1,5 @@
 /**
- * HTTP side of the server: room API, feedback/error intake, admin read-outs,
+ * HTTP side of the server: room API, crash report intake, admin read-outs,
  * legal pages, health check and the static client (precompressed, cached).
  */
 import { createReadStream, existsSync, readFileSync, statSync } from 'node:fs'
@@ -14,6 +14,9 @@ import { clientIp, limiters } from './limits.ts'
 /** Hook so the sync layer can disconnect clients of a deleted room. */
 let onRoomDeleted: (id: string) => void = () => {}
 export const setRoomDeletedHandler = (fn: (id: string) => void) => (onRoomDeleted = fn)
+let onlineIn: (id: string) => number = () => 0
+/** How many clients are connected to a room right now (from the sync server). */
+export const setOnlineCounter = (fn: (id: string) => number) => (onlineIn = fn)
 
 const ROOM_ID = /^[A-Za-z0-9_-]{6,32}$/
 
@@ -97,6 +100,19 @@ async function handleApi(req: IncomingMessage, res: ServerResponse, path: string
     return true
   }
 
+  if (path === '/api/rooms' && method === 'GET') {
+    const rooms = store.listRooms().map((r) => ({
+      id: r.id,
+      title: r.title,
+      protected: !!r.protected,
+      createdAt: r.created_at,
+      updatedAt: r.updated_at,
+      online: onlineIn(r.id),
+    }))
+    json(res, 200, { rooms })
+    return true
+  }
+
   if (path === '/api/rooms' && method === 'POST') {
     if (!limiters.rooms.take(ip)) return json(res, 429, { error: 'Too many rooms created, try again later.' }), true
     const body = await readJson(req)
@@ -131,26 +147,6 @@ async function handleApi(req: IncomingMessage, res: ServerResponse, path: string
     }
   }
 
-  if (path === '/api/feedback' && method === 'POST') {
-    if (!limiters.feedback.take(ip)) return json(res, 429, { error: 'Too much feedback, try again later.' }), true
-    const body = await readJson(req)
-    const message = str(body?.message, 4000)
-    if (!body || !message) return json(res, 400, { error: 'Empty feedback' }), true
-    store.saveFeedback({
-      kind: ['bug', 'idea', 'other'].includes(String(body.kind)) ? String(body.kind) : 'other',
-      message,
-      contact: str(body.contact, 200),
-      room: str(body.room, 32),
-      path: str(body.path, 200),
-      locale: str(body.locale, 8),
-      userAgent: str(req.headers['user-agent'], 300),
-      appVersion: str(body.appVersion, 40),
-    })
-    console.log('[feedback] received')
-    json(res, 201, { ok: true })
-    return true
-  }
-
   if (path === '/api/client-errors' && method === 'POST') {
     if (!limiters.errors.take(ip)) return json(res, 429, {}), true
     const body = await readJson(req)
@@ -175,11 +171,11 @@ async function handleApi(req: IncomingMessage, res: ServerResponse, path: string
     return true
   }
 
-  const admin = path.match(/^\/api\/admin\/(feedback|errors|stats)$/)
+  const admin = path.match(/^\/api\/admin\/(errors|stats)$/)
   if (admin && method === 'GET') {
     if (!isAdmin(req)) return json(res, 403, { error: 'Forbidden' }), true
     const limit = Math.min(1000, Number(url.searchParams.get('limit')) || 200)
-    json(res, 200, admin[1] === 'feedback' ? store.listFeedback(limit) : admin[1] === 'errors' ? store.listClientErrors(limit) : store.stats())
+    json(res, 200, admin[1] === 'errors' ? store.listClientErrors(limit) : store.stats())
     return true
   }
 

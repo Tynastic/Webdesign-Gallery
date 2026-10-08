@@ -135,12 +135,11 @@ The backup is a consistent copy made while the server keeps running, written to 
 2. Copy a backup over `/data/cow-planner.sqlite` in the volume, for example with `docker compose cp`.
 3. Run `docker compose start app`.
 
-## Reading tester feedback
+## Reading crash reports
 
-Testers send feedback from the speech-bubble button in the app or the lobby footer, and crashes are reported automatically. Read them with your `ADMIN_TOKEN`:
+Crashes in the app are reported automatically. Read them with your `ADMIN_TOKEN`:
 
 ```sh
-curl -s https://<address>/api/admin/feedback -H "Authorization: Bearer $ADMIN_TOKEN" | jq
 curl -s https://<address>/api/admin/errors   -H "Authorization: Bearer $ADMIN_TOKEN" | jq
 curl -s https://<address>/api/admin/stats    -H "Authorization: Bearer $ADMIN_TOKEN"
 ```
@@ -160,7 +159,7 @@ curl -s https://<address>/api/admin/stats    -H "Authorization: Bearer $ADMIN_TO
 | `ROOM_TTL_DAYS` | 90 | Rooms without changes for this long are deleted (checked daily) |
 | `LIMIT_ROOMS_PER_HOUR` | 10 | Room creations per IP per hour |
 | `LIMIT_CONNECTIONS_PER_IP` | 20 | Concurrent websocket connections per IP |
-| `LIMIT_FEEDBACK_PER_HOUR` / `LIMIT_ERRORS_PER_HOUR` | 10 / 30 | Per IP |
+| `LIMIT_ERRORS_PER_HOUR` | 30 | Crash reports per IP |
 | `LIMIT_MESSAGE_BYTES` | 2 MB | Largest single sync message |
 | `LIMIT_DOCUMENT_BYTES` | 20 MB | Plans above this are no longer stored (logged) |
 | `TRUST_PROXY` | `1` in Docker | Take the client IP from `CF-Connecting-IP` / `X-Forwarded-For`. Only use behind a proxy |

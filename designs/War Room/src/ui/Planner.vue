@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, ref, watch, watchEffect } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch, watchEffect, type Component } from 'vue'
 import { deleteObjects, displayName } from '../../shared/schema'
 import { useMap } from '../composables/useMap'
 import { useYArray, useYMap } from '../composables/useY'
@@ -7,12 +7,11 @@ import { t, tm } from '../i18n'
 import type { NationCatalog } from '../map/nations'
 import type { MapData } from '../map/types'
 import { toast } from '../state/feedback'
-import { loadMe, saveMe, session } from '../state/session'
+import { loadMe, saveMe, session, type ToolId } from '../state/session'
 import type { PlanHandle } from '../sync/planDoc'
-import { CloudOff, Eye, X } from 'lucide-vue-next'
+import { CloudOff, Eye, Info, X } from 'lucide-vue-next'
 import ConfirmDialog from './ConfirmDialog.vue'
 import { providePlanner } from './context'
-import FeedbackDialog from './FeedbackDialog.vue'
 import HelpDialog from './HelpDialog.vue'
 import Inspector from './Inspector.vue'
 import JoinDialog from './JoinDialog.vue'
@@ -26,6 +25,7 @@ import { TOOL_BY_KEY, toolLabel } from './toolCatalog'
 import Toolbar from './Toolbar.vue'
 import ToolOptions from './ToolOptions.vue'
 import TopBar from './TopBar.vue'
+import ZoomControl from './ZoomControl.vue'
 
 const props = defineProps<{ data: MapData; catalog: NationCatalog; handle: PlanHandle }>()
 const { plan, undo, presence, room } = props.handle
@@ -37,7 +37,6 @@ providePlanner({ data: props.data, catalog: props.catalog, plan, undo, handle: p
 const roster = useYMap(plan.nations)
 const phases = useYArray(plan.phases)
 const helpOpen = ref(false)
-const feedbackOpen = ref(false)
 const status = props.handle.status
 
 // Which nation I play is remembered per room; ask when unknown (spectating is allowed).
@@ -48,6 +47,40 @@ if (!plan.layers.has(session.activeLayer)) session.activeLayer = plan.layers.key
 if (session.activePhase && !plan.phases.toArray().some((p) => p.id === session.activePhase)) session.activePhase = null
 session.assignNation = session.me
 session.ownNation = session.me
+
+// The point counter follows the phase bar: one phase = that day, "All" = every day.
+watch(
+  () => session.activePhase,
+  (id) => (session.pointsPhases = id ? [id] : []),
+)
+
+// ---------- sidebar: the panels that matter for the active tool, most relevant first ----------
+type PanelId = 'inspector' | 'nations' | 'points' | 'layers'
+const PANELS: Record<PanelId, Component> = { inspector: Inspector, nations: NationsPanel, points: PointsPanel, layers: LayersPanel }
+const ALL_PANELS: PanelId[] = ['inspector', 'nations', 'points', 'layers']
+function panelsFor(tool: ToolId): PanelId[] {
+  switch (tool) {
+    case 'assign':
+      return ['points', 'inspector', 'nations']
+    case 'own':
+      return ['inspector', 'nations', 'points']
+    case 'select':
+    case 'measure':
+    case 'ping':
+      return ALL_PANELS
+    default: // drawing tools: what is drawn, and where it goes
+      return ['inspector', 'layers']
+  }
+}
+// Pinging is a one-shot from whatever tool was active; keep that tool's panels meanwhile.
+let lastTool: ToolId = session.tool
+const sidePanels = computed(() => {
+  if (session.tool !== 'ping') lastTool = session.tool
+  const ids = panelsFor(lastTool)
+  // Outside the select tool the inspector only shows up when there is something to inspect.
+  const inspecting = lastTool === 'select' || session.selectedObject !== null || session.selectedProvince !== null
+  return ids.filter((id) => id !== 'inspector' || inspecting).map((id) => ({ id, component: PANELS[id] }))
+})
 
 watch(
   () => session.me,
@@ -134,7 +167,7 @@ function stepPhase(dir: 1 | -1) {
 }
 
 function onKey(e: KeyboardEvent) {
-  if (helpOpen.value || joinOpen.value || feedbackOpen.value) return
+  if (helpOpen.value || joinOpen.value) return
   if (isTyping(e)) {
     if (e.key === 'Escape') (e.target as HTMLElement).blur()
     return
@@ -181,21 +214,34 @@ const meName = () => (session.me ? displayName(roster.value.get(session.me), pro
 
 <template>
   <div class="shell">
-    <TopBar :me-name="meName()" @help="helpOpen = true" @identity="joinOpen = true" @feedback="feedbackOpen = true" />
+    <TopBar :me-name="meName()" @help="helpOpen = true" @identity="joinOpen = true" />
     <Toolbar />
 
     <main class="stage" :class="`tool-${session.tool}`">
       <div ref="mapEl" class="map" role="application" :aria-label="t('planner.map')" />
-      <ToolOptions />
-      <PhaseBar />
-      <div class="map-dock">
-        <MapViewMenu />
-        <div class="statusbar" role="status" aria-live="polite">{{ tm(session.hint) || t('status.ready') }}</div>
-      </div>
-      <Toasts />
-      <div v-if="session.following !== null && followedName" class="follow-banner" role="status">
-        <Eye :size="15" />{{ t('follow.banner', { name: followedName }) }}
-        <button class="btn" @click="session.following = null"><X :size="14" />{{ t('follow.stop') }}</button>
+      <!-- Floating chrome in two stacks that flow around each other instead of overlapping. -->
+      <div class="map-chrome">
+        <div class="chrome-top">
+          <ToolOptions />
+          <div class="chrome-notices">
+            <div v-if="session.following !== null && followedName" class="follow-banner" role="status">
+              <Eye :size="15" />{{ t('follow.banner', { name: followedName }) }}
+              <button class="btn" @click="session.following = null"><X :size="14" />{{ t('follow.stop') }}</button>
+            </div>
+            <Toasts />
+          </div>
+        </div>
+        <!-- Bottom line: View menu and phase bar, the status line beside them when it fits (else above), zoom at the right. -->
+        <div class="chrome-bottom">
+          <div class="chrome-left">
+            <div class="chrome-row">
+              <MapViewMenu />
+              <PhaseBar />
+            </div>
+            <div class="statusbar chrome-surface" role="status" aria-live="polite"><Info :size="15" class="statusbar-icon" />{{ tm(session.hint) || t('status.ready') }}</div>
+          </div>
+          <ZoomControl />
+        </div>
       </div>
       <div v-if="status === 'denied'" class="gone-overlay" role="alertdialog" aria-live="assertive">
         <CloudOff :size="28" />
@@ -205,14 +251,10 @@ const meName = () => (session.me ? displayName(roster.value.get(session.me), pro
     </main>
 
     <aside class="sidebar" :aria-label="t('planner.panels')">
-      <Inspector />
-      <NationsPanel />
-      <PointsPanel />
-      <LayersPanel />
+      <component :is="p.component" v-for="p in sidePanels" :key="p.id" />
     </aside>
 
     <HelpDialog v-model:open="helpOpen" />
-    <FeedbackDialog v-model:open="feedbackOpen" />
     <JoinDialog v-model:open="joinOpen" />
     <ConfirmDialog />
   </div>

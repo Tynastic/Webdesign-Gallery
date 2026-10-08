@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { CircleCheck, LocateFixed, RotateCcw, X } from 'lucide-vue-next'
+import { Castle, CircleCheck, LocateFixed, RotateCcw, X } from 'lucide-vue-next'
 import { computed } from 'vue'
 import { assignProvinces, displayName, setOwners } from '../../shared/schema'
 import { usePoints } from '../composables/usePoints'
@@ -47,7 +47,7 @@ const phaseModel = computed({
 })
 
 // ---------- production and conquest points ----------
-const { costFor } = usePoints()
+const { costFor, markTaken } = usePoints()
 /** The price for the planned nation, or for my own nation while nothing is planned here. */
 const cost = computed(() => {
   const attacker = assignment.value?.nation ?? session.me
@@ -111,7 +111,15 @@ function pick(id: number) {
       <p v-if="cost" class="cost-line" :title="t('points.costTitle')">
         <strong>{{ cost.text }}</strong> · {{ categoryLabel(cost.category) }} · {{ classLabel(cost.ownerClass) }}
       </p>
-      <p v-if="achieved" class="done-text"><CircleCheck :size="15" />{{ t('prov.taken', { name: ownerName }) }}</p>
+      <p v-if="achieved" class="done-text">
+        <CircleCheck :size="15" />{{ t('prov.taken', { name: ownerName }) }}
+        <button class="icon-btn sm" :title="t('prov.undoTaken', { nation: start.name })" :aria-label="t('prov.undoTaken', { nation: start.name })" @click="markTaken([id], false)">
+          <RotateCcw :size="14" />
+        </button>
+      </p>
+      <button v-else-if="assignment" class="btn mark-taken" :title="t('prov.markTakenTitle')" @click="markTaken([id], true)">
+        <Castle :size="14" />{{ t('prov.markTaken', { name: roster.get(assignment.nation)?.nickname || catalog.byId.get(assignment.nation)?.name || assignment.nation }) }}
+      </button>
       <div v-if="assignment && phases.length" class="field">
         <span>{{ t('prov.inPhase') }}</span>
         <select v-model="phaseModel" :aria-label="t('prov.phaseAria')">

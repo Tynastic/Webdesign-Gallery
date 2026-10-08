@@ -18,7 +18,7 @@ const fills = computed<{ value: FillMode; label: string }[]>(() => [
 </script>
 
 <template>
-  <MenuPopover class="view-menu" :label="t('panel.view')" :title="t('view.menuTitle')" placement="above-start" button-class="map-btn">
+  <MenuPopover class="view-menu" :label="t('panel.view')" :title="t('view.menuTitle')" placement="above-start" button-class="map-btn chrome-surface">
     <template #button><SlidersHorizontal :size="16" /><span class="menu-btn-label">{{ t('panel.view') }}</span></template>
     <div class="field">
       <span>{{ t('view.colours') }} <small class="muted">· {{ t('view.coloursHint') }}</small></span>

@@ -6,6 +6,18 @@ export interface RoomInfo {
   title: string
 }
 
+/** A room as listed in the lobby. */
+export interface RoomSummary {
+  id: string
+  title: string
+  protected: boolean
+  createdAt: number
+  /** Last edit (or creation, if never edited). */
+  updatedAt: number
+  /** Clients connected right now. */
+  online: number
+}
+
 export interface RecentRoom {
   id: string
   title: string
@@ -85,6 +97,17 @@ export async function getRoom(id: string): Promise<RoomInfo | null> {
     const res = await fetch(`/api/rooms/${encodeURIComponent(id)}`)
     if (!res.ok) return null
     return await res.json()
+  } catch {
+    return null
+  }
+}
+
+/** Every room on the server, most recently edited first; null when the server cannot be reached. */
+export async function listRooms(): Promise<RoomSummary[] | null> {
+  try {
+    const res = await fetch('/api/rooms')
+    if (!res.ok) return null
+    return (await res.json()).rooms
   } catch {
     return null
   }

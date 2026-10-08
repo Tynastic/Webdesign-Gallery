@@ -111,10 +111,10 @@ Plans are kept, and browsers reconnect by themselves. Ask testers to reload so t
 
 ⚠️ Never run `docker compose down -v`. It deletes the data volume with every room.
 
-**Reading feedback.** Testers send feedback from the speech-bubble button, and crashes are reported automatically:
+**Reading crash reports.** Crashes in the app are reported automatically:
 
 ```sh
-curl -s https://<address>/api/admin/feedback -H "Authorization: Bearer <ADMIN_TOKEN>"
+curl -s https://<address>/api/admin/errors -H "Authorization: Bearer <ADMIN_TOKEN>"
 ```
 
 ## Documentation

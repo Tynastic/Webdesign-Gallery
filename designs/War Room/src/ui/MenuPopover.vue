@@ -7,7 +7,7 @@ import { nextTick, onBeforeUnmount, ref, useId, watch } from 'vue'
  * (Esc returns focus to the button). The panel stays mounted while closed, so
  * pending work inside it (a confirm dialog, a fetch) is not cut off.
  */
-withDefaults(defineProps<{ label: string; title?: string; placement?: 'below-end' | 'above-start'; buttonClass?: string }>(), {
+withDefaults(defineProps<{ label: string; title?: string; placement?: 'below-end' | 'below-start' | 'above-start'; buttonClass?: string }>(), {
   title: undefined,
   placement: 'below-end',
   buttonClass: 'btn',

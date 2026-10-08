@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
-import { COSTS, NATION_CLASS, conquestCost, planPoints, type Category, type Kind } from '../shared/points'
+import { COSTS, NATION_CLASS, conquestCost, planPoints, scopePoints, type Category, type Kind } from '../shared/points'
 import type { MapData, NationsFile } from '../src/map/types'
 
 const read = (path: string) => readFileSync(new URL(path, import.meta.url), 'utf8')
@@ -90,5 +90,40 @@ describe('cities and core land in the map data', () => {
     expect(byName('Algiers')).toMatchObject({ city: 1, core: false })
     expect(byName('Batavia')).toMatchObject({ city: 2, core: false })
     expect(byName('Dresden')).toMatchObject({ city: 0, core: true, res: null })
+  })
+})
+
+describe('points per phase (day)', () => {
+  const item = (province: number, points: number, phaseId: string | null) =>
+    ({ province, points, phaseId, done: false, category: 'enemyCore', ownerClass: 5 }) as const
+  const items = [item(1, 4, 'd1'), item(2, 3, 'd1'), item(3, 9, 'd2'), item(4, 2, null)]
+
+  it('one day counts only its conquests against the daily allowance', () => {
+    const p = scopePoints(items, { phases: ['d1'], all: false }, 6)
+    expect(p.used).toBe(7)
+    expect(p.limit).toBe(6)
+    expect(p.over).toBe(1)
+    expect(p.items.map((i) => i.province)).toEqual([1, 2])
+    expect(p.unscheduled).toBe(2)
+  })
+
+  it('several days multiply the allowance and flag each day on its own', () => {
+    const p = scopePoints(items, { phases: ['d1', 'd2'], all: false }, 8)
+    expect(p.used).toBe(16)
+    expect(p.limit).toBe(16)
+    expect(p.over).toBe(0)
+    expect(p.days).toEqual([
+      { phaseId: 'd1', used: 7, over: false },
+      { phaseId: 'd2', used: 9, over: true },
+    ])
+  })
+
+  it('the whole plan includes conquests without a phase', () => {
+    const p = scopePoints(items, { phases: ['d1', 'd2'], all: true }, null)
+    expect(p.used).toBe(18)
+    expect(p.limit).toBeNull()
+    expect(p.unscheduled).toBe(0)
+    // Without phases the plan is a single day.
+    expect(scopePoints(items, { phases: [], all: true }, 10).limit).toBe(10)
   })
 })

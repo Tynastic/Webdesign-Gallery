@@ -8,6 +8,8 @@ import type { Message } from '../i18n'
  */
 export type ToolId = 'select' | 'assign' | 'own' | 'arrow' | 'front' | 'zone' | 'unit' | 'objective' | 'text' | 'range' | 'measure' | 'ping'
 export type FillMode = 'vivid' | 'muted' | 'off'
+/** What the plan tool does on click: plan conquests, or mark planned ones as taken. */
+export type PlanMode = 'plan' | 'taken'
 
 export interface SessionState {
   tool: ToolId
@@ -24,11 +26,14 @@ export interface SessionState {
   objectiveIcon: ObjectiveIcon
   /** Nation new planned conquests go to; null = erase. */
   assignNation: string | null
+  planMode: PlanMode
   /** Nation the ownership tool marks provinces as conquered by; null = restore the original owner. */
   ownNation: string | null
   activeLayer: string
   /** null = show all phases. */
   activePhase: string | null
+  /** Phases (days) the point counter covers; empty = all. Follows the phase bar until changed in the Points panel. */
+  pointsPhases: string[]
   hiddenLayers: string[]
   selectedObject: string | null
   selectedProvince: number | null
@@ -49,6 +54,8 @@ export interface SessionState {
   hoveredProvince: number | null
   /** Transient: contextual instruction for the status bar (a message key, so it follows the language). */
   hint: Message | null
+  /** Transient: the map is fully zoomed out ('min') or in ('max'). */
+  zoomRange: 'min' | 'max' | null
 }
 
 const STORAGE_KEY = 'cow-planner.session'
@@ -75,9 +82,11 @@ export const session = reactive<SessionState>({
   unitType: 'infantry',
   objectiveIcon: 'target',
   assignNation: null,
+  planMode: 'plan',
   ownNation: null,
   activeLayer: 'general',
   activePhase: null,
+  pointsPhases: [],
   hiddenLayers: [],
   selectedObject: null,
   selectedProvince: null,
@@ -91,6 +100,7 @@ export const session = reactive<SessionState>({
   following: null,
   hoveredProvince: null,
   hint: null,
+  zoomRange: null,
   ...restore(),
 })
 

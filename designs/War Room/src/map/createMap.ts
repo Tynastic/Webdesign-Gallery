@@ -56,7 +56,6 @@ export class PlannerMap {
   private lastTool: ToolId = 'select'
   private owners: Int16Array
   private readonly svgRenderers: L.Renderer[]
-  private zoomControl: L.Control.Zoom
   private moveFrame = 0
   /** While a pointer is down the view must not jump (it would break a drag that is starting). */
   private pointerDown = false
@@ -92,7 +91,6 @@ export class PlannerMap {
       // Long-press fires 'contextmenu' on touch screens too (reserved for mobile ping/erase, see DEVELOPMENT.md, M4).
       tapHold: true,
     })
-    this.zoomControl = L.control.zoom({ position: 'bottomright', zoomInTitle: `${t('map.zoomIn')} (+)`, zoomOutTitle: `${t('map.zoomOut')} (−)` }).addTo(this.map)
     for (const [name, z] of PANES) {
       const pane = this.map.createPane(name)
       pane.style.zIndex = String(z)
@@ -212,9 +210,13 @@ export class PlannerMap {
       this.tool.refresh?.() // handles and drafts follow the view to the copy it now shows
     })
 
-    const fitWorld = () => this.map.setMinZoom(Math.floor(this.map.getBoundsZoom(world) * 4) / 4)
+    const fitWorld = () => {
+      this.map.setMinZoom(Math.floor(this.map.getBoundsZoom(world) * 4) / 4)
+      this.syncZoomRange()
+    }
     fitWorld()
     this.map.on('resize', fitWorld)
+    this.map.on('zoomend', () => this.syncZoomRange())
     this.map.fitBounds(world, { animate: false })
 
     this.syncStyle()
@@ -242,6 +244,18 @@ export class PlannerMap {
     this.map.setView([-v.y, this.near(v.x)], v.z, { animate: true })
   }
 
+  /** Zoom buttons (the map chrome draws its own, matching the other controls). */
+  zoom(dir: 1 | -1) {
+    this.userMoved()
+    if (dir > 0) this.map.zoomIn()
+    else this.map.zoomOut()
+  }
+
+  private syncZoomRange() {
+    const z = this.map.getZoom()
+    this.session.zoomRange = z <= this.map.getMinZoom() ? 'min' : z >= this.map.getMaxZoom() ? 'max' : null
+  }
+
   private userMoved() {
     if (this.session.following !== null) this.session.following = null
   }
@@ -250,8 +264,6 @@ export class PlannerMap {
   refreshLocale() {
     this.objects.sync()
     this.labels.refreshNames()
-    this.zoomControl.remove()
-    this.zoomControl = L.control.zoom({ position: 'bottomright', zoomInTitle: `${t('map.zoomIn')} (+)`, zoomOutTitle: `${t('map.zoomOut')} (−)` }).addTo(this.map)
     this.tooltip.remove()
     this.session.hoveredProvince = null
     this.tool.refresh?.()

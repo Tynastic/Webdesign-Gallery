@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { CircleHelp, Cloud, CloudOff, Download, ImageDown, LoaderCircle, MessageSquareText, Redo2, Undo2, Upload } from 'lucide-vue-next'
+import { CircleHelp, Cloud, CloudOff, Download, ImageDown, LoaderCircle, Redo2, Undo2, Upload } from 'lucide-vue-next'
 import { computed, nextTick, onBeforeUnmount, ref, shallowRef } from 'vue'
 import { displayName, exportPlan, ImportError, importPlan, LOCAL_ORIGIN, type PlanSnapshot } from '../../shared/schema'
 import { useUndoState } from '../composables/useY'
@@ -14,7 +14,7 @@ import SearchBox from './SearchBox.vue'
 import { toolLabel } from './toolCatalog'
 
 defineProps<{ meName: string }>()
-defineEmits<{ help: []; identity: []; feedback: [] }>()
+defineEmits<{ help: []; identity: [] }>()
 const { catalog, plan, undo, handle, planner } = usePlanner()
 const undoState = useUndoState(undo)
 const status = handle.status
@@ -165,7 +165,6 @@ async function importFile(e: Event) {
         <button class="icon-btn" :disabled="exporting" :title="t('top.png')" :aria-label="t('top.png')" @click="exportPng"><ImageDown :size="18" /></button>
         <input ref="fileInput" type="file" accept="application/json,.json" hidden @change="importFile" />
       </div>
-      <button class="icon-btn" :title="t('top.feedback')" :aria-label="t('top.feedback')" @click="$emit('feedback')"><MessageSquareText :size="18" /></button>
       <button class="icon-btn" :title="t('common.withKeys', { label: t('top.help'), keys: '?' })" :aria-label="t('top.help')" @click="$emit('help')"><CircleHelp :size="18" /></button>
     </div>
   </header>

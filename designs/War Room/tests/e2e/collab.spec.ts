@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { counts, goToProvince, joinAs } from './helpers'
+import { counts, goToProvince, joinAs, removeOwnRoom, removeRoom } from './helpers'
 
 test('two players share a room live', async ({ browser }) => {
   const a = await (await browser.newContext()).newPage()
@@ -41,11 +41,12 @@ test('two players share a room live', async ({ browser }) => {
   await c.goto(a.url())
   await c.waitForSelector('dialog.join[open]')
   await expect.poll(() => counts(c).then((x) => x.owned)).toBe(owned)
+  await removeOwnRoom(a)
 })
 
 test('password-protected room', async ({ browser, request }) => {
   const res = await request.post('/api/rooms', { data: { title: 'Secret', password: 'hunter2' } })
-  const { id } = await res.json()
+  const { id, ownerToken } = await res.json()
   const page = await (await browser.newContext()).newPage()
   await page.goto(`/r/${id}`)
   await page.fill('.gate input', 'wrong')
@@ -54,4 +55,28 @@ test('password-protected room', async ({ browser, request }) => {
   await page.fill('.gate input', 'hunter2')
   await page.click('.gate button[type=submit]')
   await page.waitForSelector('dialog.join[open]')
+  await removeRoom(request, id, ownerToken)
+})
+
+test('the lobby lists every room, with who is online and which are protected', async ({ browser, request }) => {
+  const stamp = Date.now().toString(36)
+  const open = await (await request.post('/api/rooms', { data: { title: `E2E open ${stamp}` } })).json()
+  const locked = await (await request.post('/api/rooms', { data: { title: `E2E locked ${stamp}`, password: 'secret' } })).json()
+
+  // Someone is in the open room.
+  const a = await (await browser.newContext()).newPage()
+  await a.goto(`/r/${open.id}`)
+  await joinAs(a, 'Player', 'GER')
+
+  // A fresh browser that has never opened either room still sees both.
+  const b = await (await browser.newContext()).newPage()
+  await b.goto('/')
+  const openRow = b.locator('.room-row').filter({ hasText: `E2E open ${stamp}` })
+  const lockedRow = b.locator('.room-row').filter({ hasText: `E2E locked ${stamp}` })
+  await expect(openRow).toContainText('1 online')
+  await expect(lockedRow.locator('.room-lock')).toBeVisible()
+  await expect(openRow.locator('.room-lock')).toHaveCount(0)
+  await openRow.click()
+  await b.waitForURL(`**/r/${open.id}`)
+  for (const r of [open, locked]) await removeRoom(request, r.id, r.ownerToken)
 })

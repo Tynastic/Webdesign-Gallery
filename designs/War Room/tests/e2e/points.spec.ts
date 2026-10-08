@@ -43,3 +43,56 @@ test('point calculator: prices planned conquests against the daily allowance', a
   await expect(teamTag).toHaveAttribute('aria-pressed', 'false')
   expect(errors).toEqual([])
 })
+
+test('point counter follows the selected days; planned provinces can be marked as taken', async ({ page }) => {
+  const errors: string[] = []
+  page.on('pageerror', (e) => errors.push(e.message))
+  await page.goto('/local')
+  await joinAs(page, 'Player', 'GER')
+  await page.fill('.points-allowance input', '10')
+  await page.keyboard.press('Enter')
+  await page.keyboard.press('Escape')
+
+  // Two days.
+  for (let i = 0; i < 2; i++) {
+    await page.click('.phase-add')
+    await page.keyboard.press('Enter')
+  }
+  const dayChip = (name: string) => page.locator('.phase-bar .phase-chip').filter({ hasText: name })
+  await goToProvince(page, 'Warsaw')
+
+  // The plan tool puts the Points panel on top and drops the Layers panel.
+  await page.keyboard.press('p')
+  await expect(page.locator('.sidebar > section').first()).toHaveAttribute('aria-labelledby', 'ph-points')
+  await expect(page.locator('#ph-layers')).toHaveCount(0)
+
+  await dayChip('Phase 1').click()
+  await page.mouse.click(588, 456)
+  await expect(page.locator('.to-points')).toHaveText('Punkte: 9 / 10 P.')
+  await dayChip('Phase 2').click()
+  await page.mouse.click(660, 456)
+  const day2 = await page.locator('.to-points').textContent()
+  expect(day2).not.toContain('9 / 10')
+
+  // All days: the limit is the allowance × 2 and each day shows its own count.
+  await page.locator('.phase-bar .phase-chip').filter({ hasText: 'Alle' }).click()
+  await expect(page.locator('.to-points')).toContainText('/ 20 P. · 2 Tage')
+  await expect(page.locator('.points-day')).toHaveCount(2)
+  await expect(page.locator('.points-day').first()).toContainText('9/10')
+
+  // Points panel: count only day 1.
+  await page.locator('.points-scope .phase-chip').filter({ hasText: 'Phase 1' }).click()
+  await expect(page.locator('.points-row .points-sum')).toHaveText('9 P. / 10')
+
+  // Mark taken from the map, then from the panel.
+  await page.locator('.segmented button').filter({ hasText: 'Eingenommen' }).click()
+  await page.mouse.click(588, 456)
+  await expect(page.locator('.points-meta')).toContainText('✓ 1 erobert')
+  await page.locator('.points-scope .phase-chip').filter({ hasText: 'Alle Tage' }).click()
+  await page.click('.points-head')
+  await page.locator('.points-take[aria-pressed=false]').click()
+  await expect(page.locator('.points-meta')).toContainText('✓ 2 erobert')
+  // Taken provinces still count against the allowance.
+  await expect(page.locator('.points-day').first()).toContainText('9/10')
+  expect(errors).toEqual([])
+})

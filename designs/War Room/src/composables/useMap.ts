@@ -34,7 +34,7 @@ export function useMap(el: Ref<HTMLElement | null>, data: MapData, catalog: Nati
     },
     { deep: true },
   )
-  watch(() => [session.assignNation, session.ownNation], () => p()?.syncMarks())
+  watch(() => [session.assignNation, session.ownNation, session.planMode], () => p()?.syncMarks())
   watch(locale, () => p()?.refreshLocale())
   // A finished measurement shows travel time for the current speed.
   watch(() => session.measureSpeed, () => p()?.syncObjects())

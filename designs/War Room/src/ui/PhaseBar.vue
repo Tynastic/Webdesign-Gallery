@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ChevronLeft, ChevronRight, Plus, X } from 'lucide-vue-next'
+import { CalendarDays, ChevronLeft, ChevronRight, Plus, X } from 'lucide-vue-next'
 import { nextTick, ref } from 'vue'
 import { addPhase, removePhase, renamePhase } from '../../shared/schema'
 import { useYArray, useYMap } from '../composables/useY'
@@ -53,9 +53,10 @@ async function remove(id: string, name: string) {
 </script>
 
 <template>
-  <div class="phase-bar" role="toolbar" :aria-label="t('phase.bar')">
+  <div class="phase-bar chrome-surface" role="toolbar" :aria-label="t('phase.bar')">
+    <span class="phase-bar-icon" :title="t('phase.bar')"><CalendarDays :size="16" /></span>
     <template v-if="phases.length">
-      <button class="icon-btn sm" :title="`${t('phase.prev')} ([)`" :aria-label="t('phase.prev')" @click="step(-1)"><ChevronLeft :size="16" /></button>
+      <button class="chrome-btn" :title="`${t('phase.prev')} ([)`" :aria-label="t('phase.prev')" @click="step(-1)"><ChevronLeft :size="16" /></button>
       <button class="phase-chip" :aria-pressed="session.activePhase === null" :title="t('phase.allTitle')" @click="session.activePhase = null">{{ t('phase.all') }}</button>
       <div v-for="(p, i) in phases" :key="p.id" class="phase-chip-wrap">
         <input
@@ -89,8 +90,8 @@ async function remove(id: string, name: string) {
           <X :size="12" />
         </button>
       </div>
-      <button class="icon-btn sm" :title="`${t('phase.next')} (])`" :aria-label="t('phase.next')" @click="step(1)"><ChevronRight :size="16" /></button>
-      <span class="to-sep" />
+      <button class="chrome-btn" :title="`${t('phase.next')} (])`" :aria-label="t('phase.next')" @click="step(1)"><ChevronRight :size="16" /></button>
+      <span class="chrome-sep" />
     </template>
     <button class="phase-add" :title="t('phase.addTitle')" @click="add">
       <Plus :size="14" />{{ phases.length ? t('phase.add') : t('phase.addFirst') }}

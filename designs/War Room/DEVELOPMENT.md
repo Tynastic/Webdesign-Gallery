@@ -25,7 +25,7 @@ Locally the server stores its data in `server/data/` (git-ignored).
 1. **Develop.** Run `npm run dev`. A running Docker deployment isn't affected: the tunnel setup publishes no ports, and Caddy uses 80/443.
 2. **Check.** Run `npm run typecheck`, `npm test` and `npm run test:e2e`. After server changes, also test rooms, joining and sync by hand in two browser windows.
 3. **Version and commit.**
-   - Raise `version` in `package.json` for noticeable changes. Testers see it in the help dialog, and it's attached to their feedback.
+   - Raise `version` in `package.json` for noticeable changes. Testers see it in the help dialog, and it's attached to crash reports.
    - Commit, so every deploy matches a commit you can return to.
 4. **Deploy.** Make a backup, then rebuild only the app (see [README](README.md#updating-after-changes) / [DEPLOY.md](DEPLOY.md#updating)). Deploy when few people are online (`/api/admin/stats`), and ask testers to reload. Open tabs keep the old client, which can fail when it lazy-loads a chunk that the rebuild replaced.
 5. **Roll back if needed.**
@@ -153,10 +153,11 @@ Code: [src/map/geo.ts](src/map/geo.ts).
 
 | Endpoint | Purpose |
 |---|---|
+| `GET /api/rooms` | Every room with title, password flag, last activity and players online (the lobby list) |
 | `POST /api/rooms`, `GET /api/rooms/:id`, `DELETE /api/rooms/:id` | Create (rate-limited) and look up rooms; delete with the owner token |
-| `POST /api/feedback`, `POST /api/client-errors` | Tester feedback, automatic crash reports |
+| `POST /api/client-errors` | Automatic crash reports |
 | `GET /api/legal/:page?lang=` | Impressum and Datenschutz from `server/legal/` |
-| `GET /api/admin/{feedback,errors,stats}` | Read-outs, require `Authorization: Bearer $ADMIN_TOKEN` |
+| `GET /api/admin/{errors,stats}` | Read-outs, require `Authorization: Bearer $ADMIN_TOKEN` |
 | `/collab` | Hocuspocus websocket. `onUpgrade` caps connections per IP, `onAuthenticate` checks the room and password |
 | `/healthz`, `/robots.txt` | Health check, crawler rules |
 

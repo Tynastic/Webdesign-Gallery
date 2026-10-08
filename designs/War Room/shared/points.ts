@@ -72,12 +72,15 @@ export interface PlannedConquest {
   start: string
   coreNation: string | null
   kind: Kind
+  /** Phase (day) it is planned for; null or absent = unscheduled. */
+  phaseId?: string | null
 }
 
 export interface PointsItem extends Cost {
   province: number
   /** The attacker already holds it. */
   done: boolean
+  phaseId: string | null
 }
 
 export interface NationPoints {
@@ -95,7 +98,7 @@ export interface NationPoints {
 /** Prices one planned conquest; an achieved one as taken from its original owner. */
 export function plannedCost(c: PlannedConquest, isTeam: (nation: string) => boolean): PointsItem {
   const done = c.owner === c.attacker
-  return { ...conquestCost({ ...c, owner: done ? c.start : c.owner, isTeam }), province: c.province, done }
+  return { ...conquestCost({ ...c, owner: done ? c.start : c.owner, isTeam }), province: c.province, done, phaseId: c.phaseId ?? null }
 }
 
 /** Sums the points of every nation's planned conquests. */
@@ -112,4 +115,56 @@ export function planPoints(conquests: Iterable<PlannedConquest>, isTeam: (nation
     if (item.ownerClass === null) sum.free++
   }
   return out
+}
+
+export interface PhaseScope {
+  /** Phases (days) counted, in plan order. */
+  phases: string[]
+  /** The scope covers the whole plan, so unscheduled conquests count too. */
+  all: boolean
+}
+
+export interface ScopedPoints {
+  /** Points of the conquests in scope; what the limit applies to. */
+  used: number
+  /** Daily allowance × days in scope; null = no allowance set. */
+  limit: number | null
+  /** Points above the limit (0 = within it). */
+  over: number
+  items: PointsItem[]
+  /** Points per day in scope, each against the daily allowance. */
+  days: { phaseId: string; used: number; over: boolean }[]
+  /** Points of unscheduled conquests the scope leaves out. */
+  unscheduled: number
+}
+
+/**
+ * A nation's points for the selected phases. The allowance is per day (= phase), so
+ * the limit grows with the number of days counted. Conquests without a phase belong
+ * to no day: they only count when the scope covers the whole plan.
+ */
+export function scopePoints(items: PointsItem[], scope: PhaseScope, allowance: number | null): ScopedPoints {
+  const perDay = new Map(scope.phases.map((id) => [id, 0]))
+  let used = 0
+  let unscheduled = 0
+  const inScope: PointsItem[] = []
+  for (const item of items) {
+    const day = item.phaseId !== null && perDay.has(item.phaseId) ? item.phaseId : null
+    if (day === null && !scope.all) {
+      if (item.phaseId === null) unscheduled += item.points
+      continue
+    }
+    inScope.push(item)
+    used += item.points
+    if (day !== null) perDay.set(day, perDay.get(day)! + item.points)
+  }
+  const limit = allowance === null ? null : allowance * Math.max(1, scope.phases.length)
+  return {
+    used,
+    limit,
+    over: limit !== null && used > limit ? used - limit : 0,
+    items: inScope,
+    days: [...perDay].map(([phaseId, p]) => ({ phaseId, used: p, over: allowance !== null && p > allowance })),
+    unscheduled,
+  }
 }

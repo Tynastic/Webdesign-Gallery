@@ -63,13 +63,8 @@ test('follow a teammate, then the owner deletes the room for everyone', async ({
   await expect(b.locator('.gone-overlay')).toBeVisible({ timeout: 15_000 })
 })
 
-test('testers can send feedback and read the legal pages', async ({ page }) => {
+test('the legal pages are linked from the lobby', async ({ page }) => {
   await page.goto('/')
-  await page.click('.lobby-foot .link-btn')
-  await page.fill('dialog.feedback textarea', 'E2E: Die Karte ist super, aber das Messen fehlt mir auf dem Handy.')
-  await page.click('dialog.feedback button[type=submit]')
-  await expect(page.locator('.toast')).toContainText('Danke')
-
   await page.click('.lobby-foot a[href="/impressum"]')
   await expect(page.locator('.legal h1')).toHaveText('Impressum')
   await expect(page.locator('.legal-body')).toContainText('§ 5 DDG')

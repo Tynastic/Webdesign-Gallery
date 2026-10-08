@@ -8,10 +8,11 @@ import { t } from '../i18n'
 import { fmtNum, fmtPoints } from '../i18n/format'
 import { toast } from '../state/feedback'
 import { OBJECTIVE_ICONS, UNIT_TYPES, objectiveLabel, objectiveSvg, unitLabel, unitSvg } from '../render/icons'
-import { session } from '../state/session'
+import { session, type PlanMode } from '../state/session'
 import ColorChooser from './ColorChooser.vue'
 import { usePlanner } from './context'
 import NationSelect from './NationSelect.vue'
+import PickerMenu from './PickerMenu.vue'
 import Segmented from './Segmented.vue'
 import { toolLabel } from './toolCatalog'
 
@@ -66,15 +67,25 @@ const target = computed(() => {
   const phase = phases.value.find((p) => p.id === session.activePhase)?.name
   return phase ? `${layer} · ${phase}` : layer
 })
-const { byNation, allowance } = usePoints()
-/** Points of everything planned for the nation being painted for. */
+const { scoped, scope } = usePoints()
+/** Points planned for the nation being painted for, in the phases (days) the counter covers. */
 const assignPoints = computed(() => {
-  if (session.tool !== 'assign' || !session.assignNation) return null
-  const used = byNation.value.get(session.assignNation)?.total ?? 0
-  const max = allowance.value
-  return { text: max === null ? t('options.points', { used: fmtPoints(used) }) : t('options.pointsOf', { used: fmtNum(used), max: fmtPoints(max) }), over: max !== null && used > max }
+  if (session.tool !== 'assign' || session.planMode !== 'plan' || !session.assignNation) return null
+  const p = scoped.value.get(session.assignNation)
+  const used = p?.used ?? 0
+  const max = p?.limit ?? null
+  const days = scope.value.phases.length
+  return {
+    text: max === null ? t('options.points', { used: fmtPoints(used) }) : t('options.pointsOf', { used: fmtNum(used), max: fmtPoints(max) }),
+    days: days > 1 ? t('options.pointsDays', { n: days }) : '',
+    over: !!p && (p.over > 0 || p.days.some((d) => d.over)),
+  }
 })
 const assignPhase = computed(() => phases.value.find((p) => p.id === session.activePhase)?.name)
+const planModes = computed<{ value: PlanMode; label: string }[]>(() => [
+  { value: 'plan', label: t('options.modePlan') },
+  { value: 'taken', label: t('options.modeTaken') },
+])
 
 const arrows = computed<{ value: ArrowVariant; label: string }[]>(() => [
   { value: 'attack', label: t('variant.attack') },
@@ -97,7 +108,8 @@ const iconColor = computed(() => session.drawColor ?? (session.me ? roster.value
     <span class="to-title">{{ toolLabel(session.tool) }}</span>
 
     <template v-if="session.tool === 'assign' || session.tool === 'own'">
-      <div class="player-pick" role="radiogroup" :aria-label="session.tool === 'assign' ? t('options.planFor') : t('options.conqueredBy')">
+      <Segmented v-if="session.tool === 'assign'" v-model="session.planMode" :options="planModes" :label="t('options.planMode')" :title="t('options.planModeTitle')" />
+      <div v-if="session.tool === 'own' || session.planMode === 'plan'" class="player-pick" role="radiogroup" :aria-label="session.tool === 'assign' ? t('options.planFor') : t('options.conqueredBy')">
         <button
           v-for="(n, i) in rosterList"
           :key="n.id"
@@ -128,41 +140,54 @@ const iconColor = computed(() => session.drawColor ?? (session.me ? roster.value
         :exclude="[...roster.keys()]"
         @update:model-value="pickOtherOwner"
       />
-      <span v-if="assignPoints" class="to-points" :class="{ over: assignPoints.over }" :title="t('options.pointsTitle')" role="status">{{ assignPoints.text }}</span>
-      <span v-if="session.tool === 'assign' && assignPhase" class="to-target" :title="t('options.phaseTitle')">{{ t('options.phase', { name: assignPhase }) }}</span>
+      <span v-if="assignPoints" class="to-points" :class="{ over: assignPoints.over }" :title="t('options.pointsTitle')" role="status">{{ assignPoints.text }}<small v-if="assignPoints.days"> · {{ assignPoints.days }}</small></span>
+      <span v-if="session.tool === 'assign' && session.planMode === 'taken'" class="to-target">{{ t('options.takenHelp') }}</span>
+      <span v-if="session.tool === 'assign' && session.planMode === 'plan' && assignPhase" class="to-target" :title="t('options.phaseTitle')">{{ t('options.phase', { name: assignPhase }) }}</span>
     </template>
 
     <Segmented v-else-if="session.tool === 'arrow'" v-model="session.arrowVariant" :options="arrows" :label="t('options.arrowType')" />
     <Segmented v-else-if="session.tool === 'front'" v-model="session.frontVariant" :options="fronts" :label="t('options.lineType')" />
     <Segmented v-else-if="session.tool === 'zone'" v-model="session.zoneVariant" :options="zones" :label="t('options.zoneType')" />
 
-    <div v-else-if="session.tool === 'unit'" class="icon-pick" role="radiogroup" :aria-label="t('options.unitType')">
-      <button
-        v-for="u in UNIT_TYPES"
-        :key="u"
-        class="icon-pick-btn"
-        role="radio"
-        :aria-checked="session.unitType === u"
-        :title="unitLabel(u)"
-        :aria-label="unitLabel(u)"
-        @click="session.unitType = u"
-        v-html="unitSvg(u, iconColor)"
-      />
-    </div>
+    <PickerMenu v-else-if="session.tool === 'unit'" :label="t('options.unitType')">
+      <template #current>
+        <span class="picker-icon" v-html="unitSvg(session.unitType, iconColor)" />
+        <span class="picker-text">{{ unitLabel(session.unitType) }}</span>
+      </template>
+      <div class="icon-pick" role="radiogroup" :aria-label="t('options.unitType')">
+        <button
+          v-for="u in UNIT_TYPES"
+          :key="u"
+          class="icon-pick-btn"
+          role="radio"
+          :aria-checked="session.unitType === u"
+          :title="unitLabel(u)"
+          :aria-label="unitLabel(u)"
+          @click="session.unitType = u"
+          v-html="unitSvg(u, iconColor)"
+        />
+      </div>
+    </PickerMenu>
 
-    <div v-else-if="session.tool === 'objective'" class="icon-pick" role="radiogroup" :aria-label="t('options.objectiveIcon')">
-      <button
-        v-for="o in OBJECTIVE_ICONS"
-        :key="o"
-        class="icon-pick-btn round"
-        role="radio"
-        :aria-checked="session.objectiveIcon === o"
-        :title="objectiveLabel(o)"
-        :aria-label="objectiveLabel(o)"
-        @click="session.objectiveIcon = o"
-        v-html="objectiveSvg(o, iconColor)"
-      />
-    </div>
+    <PickerMenu v-else-if="session.tool === 'objective'" :label="t('options.objectiveIcon')">
+      <template #current>
+        <span class="picker-icon round" v-html="objectiveSvg(session.objectiveIcon, iconColor)" />
+        <span class="picker-text">{{ objectiveLabel(session.objectiveIcon) }}</span>
+      </template>
+      <div class="icon-pick" role="radiogroup" :aria-label="t('options.objectiveIcon')">
+        <button
+          v-for="o in OBJECTIVE_ICONS"
+          :key="o"
+          class="icon-pick-btn round"
+          role="radio"
+          :aria-checked="session.objectiveIcon === o"
+          :title="objectiveLabel(o)"
+          :aria-label="objectiveLabel(o)"
+          @click="session.objectiveIcon = o"
+          v-html="objectiveSvg(o, iconColor)"
+        />
+      </div>
+    </PickerMenu>
 
     <template v-if="session.tool === 'measure'">
       <label class="to-field" :title="t('options.speedTitle')">
@@ -195,7 +220,13 @@ const iconColor = computed(() => session.drawColor ?? (session.me ? roster.value
 
     <template v-if="drawing">
       <span class="to-sep" />
-      <ColorChooser v-model="session.drawColor" auto :label="t('options.drawColour')" />
+      <PickerMenu :label="t('options.drawColour')">
+        <template #current>
+          <span class="picker-swatch" :style="{ background: iconColor }" />
+          <span v-if="session.drawColor === null" class="picker-text">{{ t('colour.auto') }}</span>
+        </template>
+        <ColorChooser v-model="session.drawColor" auto :label="t('options.drawColour')" />
+      </PickerMenu>
       <span class="to-sep" />
       <span class="to-target" :title="t('options.targetTitle')">→ {{ target }}</span>
     </template>

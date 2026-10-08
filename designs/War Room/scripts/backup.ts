@@ -1,5 +1,5 @@
 /**
- * Consistent online backup of the SQLite database (rooms, plans, feedback) while
+ * Consistent online backup of the SQLite database (rooms, plans, crash reports) while
  * the server keeps running: `VACUUM INTO` writes a compact copy. Keeps the newest
  * BACKUP_KEEP files (default 14) in $DATA_DIR/backups.
  *

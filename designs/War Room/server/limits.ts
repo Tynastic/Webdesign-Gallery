@@ -70,7 +70,6 @@ export function clientIp(req: IncomingMessage): string {
 const HOUR = 3_600_000
 export const limiters = {
   rooms: new RateLimiter(config.limits.roomsPerHour, HOUR),
-  feedback: new RateLimiter(config.limits.feedbackPerHour, HOUR),
   errors: new RateLimiter(config.limits.errorsPerHour, HOUR),
   connections: new ConnectionCounter(config.limits.connectionsPerIp),
 }

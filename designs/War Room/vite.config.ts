@@ -6,7 +6,7 @@ import vue from '@vitejs/plugin-vue'
 
 const SERVER = `localhost:${process.env.SERVER_PORT ?? 1234}`
 
-/** "0.4.0+a4cdf26": package version plus git commit, shown in Help and sent with feedback. */
+/** "0.4.0+a4cdf26": package version plus git commit, shown in Help and sent with crash reports. */
 function appVersion() {
   const { version } = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8'))
   if (process.env.APP_COMMIT) return `${version}+${process.env.APP_COMMIT.slice(0, 7)}` // Docker builds have no .git

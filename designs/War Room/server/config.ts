@@ -27,13 +27,12 @@ export const config = {
   legalDir: resolve(process.env.LEGAL_DIR ?? join(root, 'server', 'legal')),
   /** Behind a reverse proxy (Caddy): take the client IP from X-Forwarded-For. */
   trustProxy: process.env.TRUST_PROXY === '1' || process.env.TRUST_PROXY === 'true',
-  /** Enables the /api/admin/* endpoints (feedback, errors, room stats). Unset = disabled. */
+  /** Enables the /api/admin/* endpoints (errors, room stats). Unset = disabled. */
   adminToken: process.env.ADMIN_TOKEN ?? '',
   /** Rooms without any activity for this many days are deleted. */
   roomTtlDays: int('ROOM_TTL_DAYS', 90),
   limits: {
     roomsPerHour: int('LIMIT_ROOMS_PER_HOUR', 10),
-    feedbackPerHour: int('LIMIT_FEEDBACK_PER_HOUR', 10),
     errorsPerHour: int('LIMIT_ERRORS_PER_HOUR', 30),
     connectionsPerIp: int('LIMIT_CONNECTIONS_PER_IP', 20),
     /** Largest single websocket message (a sync update). */
