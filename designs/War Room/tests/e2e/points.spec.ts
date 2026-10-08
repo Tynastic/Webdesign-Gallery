@@ -5,7 +5,7 @@ test('point calculator: prices planned conquests against the daily allowance', a
   const errors: string[] = []
   page.on('pageerror', (e) => errors.push(e.message))
   await page.goto('/local')
-  await joinAs(page, 'Tyo', 'GER')
+  await joinAs(page, 'Player', 'GER')
   await expect(page.locator('.points-allowance')).toBeVisible()
   await page.fill('.points-allowance input', '10')
   await page.keyboard.press('Enter')
@@ -18,7 +18,7 @@ test('point calculator: prices planned conquests against the daily allowance', a
   await expect(page.locator('.prod-tags')).toContainText('Doppelstadt')
   await expect(page.locator('.prod-tags')).toContainText('Kernland')
   await expect(page.locator('.prod')).toContainText(/Öl\s*6\.000/)
-  await expect(page.locator('.cost-line')).toContainText('9 P. für Tyo (Deutschland)')
+  await expect(page.locator('.cost-line')).toContainText('9 P. für Player (Deutschland)')
 
   await page.keyboard.press('p')
   await page.mouse.click(588, 456)

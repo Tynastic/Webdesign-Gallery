@@ -131,7 +131,7 @@ export function ensureDefaults(plan: Plan, defaults: { title?: string; layerName
 /** Team members get team prices on each other's core land; nations with a player count by default. */
 export const isTeam = (entry: PlanNation | undefined): boolean => !!entry && (entry.team ?? entry.nickname !== '')
 
-/** "Tyo (Germany)" for nations with a player, "Germany" otherwise. */
+/** "Playername (Germany)" for nations with a player, "Germany" otherwise. */
 export function displayName(entry: PlanNation | undefined, nationName: string): string {
   return entry?.nickname ? `${entry.nickname} (${nationName})` : nationName
 }

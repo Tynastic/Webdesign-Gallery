@@ -16,7 +16,7 @@ async function createRoom(browser: Browser, nickname: string, nation: string) {
 
 test('measure distances with travel time and calibrate them', async ({ page }) => {
   await page.goto('/local')
-  await joinAs(page, 'Tyo', 'GER')
+  await joinAs(page, 'Player', 'GER')
   await goToProvince(page, 'Warsaw')
   await page.keyboard.press('m')
   await page.mouse.click(450, 450)
@@ -35,14 +35,14 @@ test('measure distances with travel time and calibrate them', async ({ page }) =
 })
 
 test('follow a teammate, then the owner deletes the room for everyone', async ({ browser }) => {
-  const a = await createRoom(browser, 'Tyo', 'GER')
+  const a = await createRoom(browser, 'Player', 'GER')
   const b = await (await browser.newContext({ viewport: { width: 1440, height: 860 } })).newPage()
   await b.goto(a.url())
   await joinAs(b, 'Max', 'ITA')
 
   // B follows A; A jumps to Japan, B's view comes along.
   await b.locator('.presence .avatar').first().click()
-  await expect(b.locator('.follow-banner')).toContainText('Tyo')
+  await expect(b.locator('.follow-banner')).toContainText('Player')
   await a.evaluate(() => (window as unknown as { __cow: Cow }).__cow.planner.map.setView([-2500, 12000], -1, { animate: false }))
   await expect.poll(async () => Math.round((await center(b)).lng)).toBe(12000)
   // Panning by hand hands control back.
@@ -77,7 +77,7 @@ test('testers can send feedback and read the legal pages', async ({ page }) => {
 
 test('export the map view as PNG', async ({ page }) => {
   await page.goto('/local')
-  await joinAs(page, 'Tyo', 'GER')
+  await joinAs(page, 'Player', 'GER')
   const download = page.waitForEvent('download')
   await page.click('.file-group button:has(svg.lucide-image-down)')
   const file = await download

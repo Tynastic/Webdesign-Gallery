@@ -356,7 +356,7 @@ export const en = {
   'join.title': 'Which nation do you play?',
   'join.text': "Your drawings and planned conquests use your nation's colour. Others see your nickname and cursor.",
   'join.nickname': 'Your nickname',
-  'join.nickPlaceholder': 'As in Call of War, e.g. Tyo',
+  'join.nickPlaceholder': 'As in-game',
   'join.inPlan': 'Nations in this plan',
   'join.noPlayer': 'No player yet',
   'join.other': 'Or another nation',

@@ -36,18 +36,18 @@ describe('plan model', () => {
 
   it('gives roster nations distinct marker colours and optional nicknames', () => {
     const plan = freshPlan()
-    addNation(plan, 'GER', '  Tyo ')
+    addNation(plan, 'GER', '  Player ')
     addNation(plan, 'ITA')
-    expect(plan.nations.get('GER')).toMatchObject({ id: 'GER', nickname: 'Tyo' })
+    expect(plan.nations.get('GER')).toMatchObject({ id: 'GER', nickname: 'Player' })
     expect(plan.nations.get('ITA')!.nickname).toBe('')
     expect(plan.nations.get('GER')!.color).not.toBe(plan.nations.get('ITA')!.color)
   })
 
   it('does not duplicate a nation', () => {
     const plan = freshPlan()
-    addNation(plan, 'GER', 'Tyo')
+    addNation(plan, 'GER', 'Player')
     addNation(plan, 'GER', 'Someone else')
-    expect(plan.nations.get('GER')!.nickname).toBe('Tyo')
+    expect(plan.nations.get('GER')!.nickname).toBe('Player')
   })
 
   it('clears a removed nation’s planned conquests but keeps ownership', () => {
@@ -104,7 +104,7 @@ describe('plan model', () => {
 
   it('round-trips through export/import', () => {
     const plan = freshPlan()
-    addNation(plan, 'GER', 'Tyo')
+    addNation(plan, 'GER', 'Player')
     addPhase(plan, 'Day 1')
     assignProvinces(plan, [5, 6], 'GER', null)
     setOwners(plan, [{ province: 7, nation: 'GER', original: 'POL' }])

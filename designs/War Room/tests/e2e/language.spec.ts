@@ -8,7 +8,7 @@ test('German by default, switchable to English without reload', async ({ page })
   await expect(page.locator('html')).toHaveAttribute('lang', 'de')
 
   await page.goto('/local')
-  await joinAs(page, 'Tyo', 'GER')
+  await joinAs(page, 'Player', 'GER')
   await expect(page.locator('.statusbar')).toContainText('Objekt oder Provinz anklicken')
   await expect(page.locator('.nation-sub').first()).toContainText('Deutschland')
 

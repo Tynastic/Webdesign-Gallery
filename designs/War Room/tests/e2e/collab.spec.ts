@@ -9,7 +9,7 @@ test('two players share a room live', async ({ browser }) => {
   await a.fill('.lobby-card input[maxlength="80"]', 'E2E room')
   await a.click('.lobby-card button[type=submit]')
   await a.waitForURL(/\/r\//)
-  await joinAs(a, 'Tyo', 'GER')
+  await joinAs(a, 'Player', 'GER')
 
   await b.goto(a.url())
   await joinAs(b, 'Max', 'ITA')

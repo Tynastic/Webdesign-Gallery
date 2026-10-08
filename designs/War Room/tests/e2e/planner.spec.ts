@@ -5,7 +5,7 @@ test('offline plan: paint, conquer, draw, undo and persist', async ({ page }) =>
   const errors: string[] = []
   page.on('pageerror', (e) => errors.push(e.message))
   await page.goto('/local')
-  await joinAs(page, 'Tyo', 'GER')
+  await joinAs(page, 'Player', 'GER')
   await expect(page.locator('.nation-row')).toHaveCount(1)
   await goToProvince(page, 'Warsaw')
 

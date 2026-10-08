@@ -358,7 +358,7 @@ export const de: Messages = {
   'join.title': 'Welche Nation spielst du?',
   'join.text': 'Deine Zeichnungen und geplanten Eroberungen erscheinen in der Farbe deiner Nation. Die anderen sehen deinen Spitznamen und deinen Mauszeiger.',
   'join.nickname': 'Dein Spitzname',
-  'join.nickPlaceholder': 'Wie in Call of War, z. B. Tyo',
+  'join.nickPlaceholder': 'Wie In-Game oder Discord',
   'join.inPlan': 'Nationen in diesem Plan',
   'join.noPlayer': 'Noch kein Spieler',
   'join.other': 'Oder eine andere Nation',

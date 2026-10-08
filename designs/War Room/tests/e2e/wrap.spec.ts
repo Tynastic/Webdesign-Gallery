@@ -7,7 +7,7 @@ test('the map wraps: pan from Asia across the Pacific to America', async ({ page
   const errors: string[] = []
   page.on('pageerror', (e) => errors.push(e.message))
   await page.goto('/local')
-  await joinAs(page, 'Tyo', 'JPN')
+  await joinAs(page, 'Player', 'JPN')
   await page.evaluate(() => (window as unknown as { __cow: Cow }).__cow.planner.map.setView([-1900, 12000], -2, { animate: false }))
 
   // Two drags to the east (dragging the map to the left), 600 px = 2400 map units each at this zoom.
