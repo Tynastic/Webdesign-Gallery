@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { ArrowRight, CloudOff, LayoutList, Lock, LogIn, LogOut, Plus, Search, ShieldCheck } from 'lucide-vue-next'
+import { ArrowRight, CloudOff, LayoutList, Lock, LogIn, Plus, Search, ShieldCheck } from 'lucide-vue-next'
 import { computed, onMounted, ref } from 'vue'
 import { LOCALES, locale, t } from '../i18n'
 import { relativeTime as ago } from '../i18n/format'
-import { adminLogout, adminStatus, isAdmin } from '../sync/admin'
+import { adminStatus, isAdmin } from '../sync/admin'
 import { createRoom, listRooms, recentRooms, roomIdFromInput, storePassword, type RoomSummary } from '../sync/rooms'
 import Segmented from './Segmented.vue'
 import Toasts from './Toasts.vue'
@@ -140,7 +140,6 @@ const shown = computed(() => {
                 <small class="muted" :title="new Date(r.activeAt).toLocaleString(locale)">{{ t('lobby.active', { ago: ago(r.activeAt) }) }}</small>
               </span>
             </a>
->>>>
 
           </li>
         </ul>
