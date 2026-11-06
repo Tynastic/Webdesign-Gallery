@@ -7,10 +7,12 @@ import Lobby from './Lobby.vue'
 const route = parseRoute()
 const PlannerGate = defineAsyncComponent(() => import('./PlannerGate.vue'))
 const LegalPage = defineAsyncComponent(() => import('./LegalPage.vue'))
+const AdminPage = defineAsyncComponent(() => import('./AdminPage.vue'))
 </script>
 
 <template>
   <Lobby v-if="route.kind === 'lobby'" />
   <LegalPage v-else-if="route.kind === 'legal'" :page="route.page" />
+  <AdminPage v-else-if="route.kind === 'admin'" />
   <PlannerGate v-else :room="route.kind === 'room' ? route.id : 'local'" />
 </template>

@@ -5,8 +5,9 @@ import { t } from '../i18n'
 import { NationCatalog } from '../map/nations'
 import type { MapData, NationsFile } from '../map/types'
 import { session } from '../state/session'
+import { adminLogout, adminToken } from '../sync/admin'
 import { AuthError, openPlan, type PlanHandle } from '../sync/planDoc'
-import { getRoom, rememberRoom, storedPassword, storePassword } from '../sync/rooms'
+import { canOrganizeRoom, getRoom, rememberRoom, storedPassword, storePassword } from '../sync/rooms'
 import Planner from './Planner.vue'
 
 /** Loads map data and opens the plan (offline or a room, with password gate); lazily loaded with the planner. */
@@ -38,6 +39,8 @@ async function open(room: string, pw?: string) {
   try {
     status.value = room === 'local' ? t('splash.openingLocal') : t('splash.joining')
     await Promise.all([h.ready, mapData])
+    const nations = catalog.value!
+    h.match.setColors((n) => nations.byId.get(n)?.color)
     session.room = room
     handle.value = h
     if (room !== 'local') rememberRoom(room, String(h.plan.meta.get('title') ?? roomTitle))
@@ -47,6 +50,8 @@ async function open(room: string, pw?: string) {
       // The room's existence was checked via the API first, so a rejected connection means a wrong password
       // (Hocuspocus only reports a generic "permission-denied" to clients).
       storePassword(room, '')
+      // An expired admin session gets refused too: drop it so the password gate makes sense.
+      if (adminToken()) adminLogout()
       needPassword.value = true
       passwordError.value = t('gate.wrong')
       return
@@ -72,7 +77,8 @@ onMounted(async () => {
   roomTitle = info?.title ?? ''
   const pw = storedPassword(props.room)
   // Offline (info === null): open the cached copy; it syncs once the server is reachable.
-  if (info?.protected && !pw) needPassword.value = true
+  // Organizers (room creator, admin) get in without the password.
+  if (info?.protected && !pw && !canOrganizeRoom(props.room)) needPassword.value = true
   else await open(props.room, pw)
 })
 </script>

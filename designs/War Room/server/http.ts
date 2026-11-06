@@ -7,9 +7,11 @@ import type { IncomingMessage, ServerResponse } from 'node:http'
 import { extname, join, normalize } from 'node:path'
 import { timingSafeEqual } from 'node:crypto'
 import { nanoid } from 'nanoid'
+import { adminEnabled, checkAdminPassword, checkAdminSession, createAdminSession } from './auth.ts'
 import { config } from './config.ts'
 import * as store from './db.ts'
 import { clientIp, limiters } from './limits.ts'
+import { isEmpty, roomContent } from './roomStats.ts'
 
 /** Hook so the sync layer can disconnect clients of a deleted room. */
 let onRoomDeleted: (id: string) => void = () => {}
@@ -82,9 +84,12 @@ function bearer(req: IncomingMessage): string {
   return h.startsWith('Bearer ') ? h.slice(7).trim() : ''
 }
 
+/** The operator's API token (ADMIN_TOKEN) or a logged-in admin's session. */
 function isAdmin(req: IncomingMessage): boolean {
   const token = bearer(req)
-  if (!config.adminToken || !token) return false
+  if (!token) return false
+  if (checkAdminSession(token)) return true
+  if (!config.adminToken) return false
   const a = Buffer.from(token), b = Buffer.from(config.adminToken)
   return a.length === b.length && timingSafeEqual(a, b)
 }
@@ -138,10 +143,11 @@ async function handleApi(req: IncomingMessage, res: ServerResponse, path: string
     }
     if (method === 'DELETE') {
       if (!row) return json(res, 404, { error: 'Not found' }), true
-      if (!store.checkToken(bearer(req), row.owner_hash)) return json(res, 403, { error: 'Only the room creator can delete it.' }), true
+      const owner = store.checkToken(bearer(req), row.owner_hash)
+      if (!owner && !checkAdminSession(bearer(req))) return json(res, 403, { error: 'Only the room creator or the admin can delete it.' }), true
       store.deleteRoom(id)
       onRoomDeleted(id)
-      console.log(`[room] deleted ${id} by owner`)
+      console.log(`[room] deleted ${id} by ${owner ? 'owner' : 'admin'}`)
       json(res, 200, { ok: true })
       return true
     }
@@ -168,6 +174,61 @@ async function handleApi(req: IncomingMessage, res: ServerResponse, path: string
     const file = [join(config.legalDir, `${legal[1]}.${lang}.html`), join(config.legalDir, `${legal[1]}.de.html`)].find((f) => existsSync(f))
     if (!file) return json(res, 404, { error: 'Not configured' }), true
     send(res, 200, readFileSync(file, 'utf8'), 'text/html; charset=utf-8', { 'Cache-Control': 'no-cache' })
+    return true
+  }
+
+  if (path === '/api/admin/login' && method === 'POST') {
+    if (!adminEnabled()) return json(res, 404, { error: 'Admin login is not configured.' }), true
+    if (!limiters.logins.take(ip)) return json(res, 429, { error: 'Too many attempts, try again later.' }), true
+    const body = await readJson(req)
+    if (!checkAdminPassword(String(body?.password ?? ''))) {
+      console.log('[admin] failed login')
+      return json(res, 403, { error: 'Wrong password' }), true
+    }
+    console.log('[admin] login')
+    json(res, 200, createAdminSession())
+    return true
+  }
+
+  // Room management: every room with what is in it, and deleting several at once.
+  if (path === '/api/admin/rooms' && method === 'GET') {
+    if (!isAdmin(req)) return json(res, 403, { error: 'Forbidden' }), true
+    const rooms = store.listRooms(100_000).map((r) => {
+      const content = roomContent(r.id, r.updated_at)
+      return {
+        id: r.id,
+        title: r.title,
+        protected: !!r.protected,
+        createdAt: r.created_at,
+        updatedAt: r.updated_at,
+        online: onlineIn(r.id),
+        ...content,
+        empty: isEmpty(content),
+      }
+    })
+    json(res, 200, { ttlDays: config.roomTtlDays, rooms })
+    return true
+  }
+
+  if (path === '/api/admin/rooms/delete' && method === 'POST') {
+    if (!isAdmin(req)) return json(res, 403, { error: 'Forbidden' }), true
+    const body = await readJson(req)
+    const ids = Array.isArray(body?.ids) ? body.ids.filter((id): id is string => typeof id === 'string' && ROOM_ID.test(id)) : null
+    if (!ids || ids.length > 1000) return json(res, 400, { error: 'Invalid request' }), true
+    let deleted = 0
+    for (const id of new Set(ids)) {
+      if (!store.findRoom(id)) continue
+      store.deleteRoom(id)
+      onRoomDeleted(id)
+      deleted++
+    }
+    console.log(`[room] admin deleted ${deleted} room(s)`)
+    json(res, 200, { deleted })
+    return true
+  }
+
+  if (path === '/api/admin/session' && method === 'GET') {
+    json(res, 200, { enabled: adminEnabled(), valid: checkAdminSession(bearer(req)) })
     return true
   }
 
@@ -238,7 +299,7 @@ function serveStatic(req: IncomingMessage, res: ServerResponse, path: string): b
   if (file.endsWith('index.html')) {
     headers['Content-Security-Policy'] = CSP
     // Rooms are private links: keep them out of search engines.
-    if (path.startsWith('/r/')) headers['X-Robots-Tag'] = 'noindex, nofollow'
+    if (path.startsWith('/r/') || path.startsWith('/admin')) headers['X-Robots-Tag'] = 'noindex, nofollow'
   }
   if (req.headers['if-none-match'] === etag) {
     res.writeHead(304, headers)
@@ -258,7 +319,7 @@ export async function handleRequest(req: IncomingMessage, res: ServerResponse): 
     const url = new URL(req.url ?? '/', 'http://localhost')
     const path = url.pathname
     if (path === '/robots.txt') {
-      send(res, 200, 'User-agent: *\nDisallow: /r/\nDisallow: /api/\n', 'text/plain; charset=utf-8', { 'Cache-Control': 'public, max-age=86400' })
+      send(res, 200, 'User-agent: *\nDisallow: /r/\nDisallow: /admin\nDisallow: /api/\n', 'text/plain; charset=utf-8', { 'Cache-Control': 'public, max-age=86400' })
       return true
     }
     if (await handleApi(req, res, path, url)) return true

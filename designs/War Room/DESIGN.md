@@ -10,13 +10,15 @@ The map is drawn by our own canvas layers (`src/map/baseLayer.ts`, `markLayer.ts
 |---|---|---|
 | Ocean | Radial gradient from light to deep, with a faint 1000-unit grid | Gives the sea depth and a "chart" feel without distracting |
 | Coasts | Two soft, wide light-blue strokes under the land, plus a thin dark coastline | Shallow-water halo; land reads as land at any zoom |
-| Land | Nation colours **muted by default** (mixed 55% toward paper). Vivid and Off are one click away | Figure/ground: the base map recedes so player plans stand out |
+| Land | Four modes. **Vivid** and **Muted** (mixed 55% toward paper): the Call of War colours, so the map looks like the game. **Teams** (the default): Axis terracotta, Allies steel blue, each nation keeping a little of its own colour, a team nation without a player paler, playable nations without a team sand. **Off**: paper. **Grey out AI nations** (a toggle; choosing Teams switches it on, Vivid or Muted off) greys every nation without a player | The game's look for orientation; the sides at a glance in Teams; greying shows which nations are actually played |
 | Borders | Three tiers: province (thin, fades out when zoomed far out), nation (dashed over a light underline), coast | Visual hierarchy: you can always tell which provinces belong together |
-| Labels | Nation names in letterspaced serif caps when zoomed out, city names in sans with a paper halo when zoomed in, packed without overlaps | Atlas convention. Labels stay readable on any fill |
+| Labels | Nation names in letterspaced serif caps when zoomed out, city names in sans with a paper halo when zoomed in, packed without overlaps. No player names on the map: colour tells who is who | Atlas convention. Labels stay readable on any fill |
+| Capitals | Gold star with a dark outline, at every zoom level | They cost 10 points and decide wars: they must never be hidden |
 | Cities | Dot for a city, double ring for a Doppelstadt, always drawn; their names are placed first, in bold, and in smaller provinces than others. Doppelstädte stay visible when zoomed far out | Atlas convention for settlement size. Cities are the provinces that matter most, so they win label collisions |
 | Resources | A glyph in front of the name (wheat ear, ingot, drop) in the resource's colour with a paper halo, three sizes by production; same shapes in the tooltip, province panel and View-menu legend | Economic-atlas convention. Readable without hovering, and the size answers "how much" at a glance |
-| Planned conquests | Tint, diagonal hatching that stays the same size on screen, and an inner outline in the nation's marker colour; a dashed outline once conquered | Readable even over a same-hued nation, and distinct from nation fills |
-| Drawings | Tapered spline arrows with a broad head, barbed or double front lines, dashed zones, NATO-style unit frames | Uses the visual language players already know from war maps |
+| Planned conquests | Tint, diagonal hatching that stays the same size on screen, and an inner outline, in the nation's Call of War colour (muted on the Teams map, so the team land stays in front); a dashed outline once conquered. Hatching and outline sit on a dark casing, and the dashes alternate with dark ones | One colour per nation everywhere: land, markings, player. The casing keeps markings readable on land of a similar colour, including the conqueror's own land once taken |
+| Legend | A collapsible card in the map's bottom-right corner: team swatches (Teams mode), AI nations (when greyed), planned/achieved and capitals. The PNG export's footer names the players whose nations are in the exported view, in their colours | Recognition rather than recall; an exported image explains exactly what it shows |
+| Drawings | In the drawer's nation colour by default (muted on the Teams map); generic ones in enemy red, friendly blue (the military-map convention) or a neutral grey, white or black. Tapered spline arrows with a broad head, barbed or double front lines, dashed zones, NATO-style unit frames | Uses the visual language players already know from war maps |
 
 ## Usability principles applied
 
@@ -43,7 +45,7 @@ The map is drawn by our own canvas layers (`src/map/baseLayer.ts`, `markLayer.ts
    - Pickers share the same segmented-control and swatch components.
 5. **Error prevention**
    - Drags pan and clicks draw, so you never draw by accident while panning.
-   - Destructive actions that cascade (removing a nation with planned conquests, a layer with drawings, a used phase, importing over a plan) ask for confirmation, with the focus on *Cancel*.
+   - Destructive actions that cascade (removing a player, a layer with drawings, a used phase, importing over a plan) ask for confirmation, with the focus on *Cancel*.
    - Objects can be locked.
    - The last layer can't be deleted.
 6. **Recognition rather than recall**
@@ -107,15 +109,25 @@ Call of War's world is round, so the planner's is too. Panning past the Pacific 
 - **Status at a glance.** A chip next to the title always shows *Live*, *Connecting…*, *Offline* or *Offline plan*, and its tooltip says what that means for your edits. Being offline is never an error: you keep working, and changes merge when the connection returns.
 - **Who's here.** Avatars in the top bar show everyone in the room, coloured by their nation. The tooltip names their current tool, and clicking an avatar flies to their cursor. Live cursors carry name tags.
 - **Pointing at things.** Alt+click (or the Ping tool, `G`) flashes a ring with your name on everyone's map. Pings that land off-screen for a teammate arrive as a toast with **Show**.
-- **Identity without accounts.** "Which nation do you play?" is asked once per room. It is remembered per room, can be changed from the identity chip, and "Just watching" is a valid answer.
+- **Identity without accounts.** "Who are you?" is asked once per room: pick your name if an organizer already listed you, or sign up with the nation you would like. It is remembered per room, can be changed from the identity chip, and "Just watching" is a valid answer.
+- **One board for the line-up.** Axis left, Allies right, unassigned nations between them, waiting players underneath: the layout mirrors the two sides of the map. Organizers drag cards, or use the arrows and pickers on each card (same result, keyboard-friendly); a balance strip compares players, classes and provinces per team. Everyone else sees the same board with a lock notice instead of controls, so nobody wonders why a drag does nothing.
+- **Changes reach the player.** When an organizer seats you, a toast says which nation you play now, and the identity chip, avatar ring and drawing colour follow.
 - **Planned vs. conquered is unmistakable.**
-  - Planned conquests are drawn in the nation's marker colour as hatching; achieved ones turn into a dashed outline.
+  - Planned conquests are drawn in the nation's colour as hatching; achieved ones turn into a dashed outline.
   - Conquests recolour the land itself with the owner's map colour, and nation borders and labels move.
   - Every view uses the same wording: "Planned conquest", "Held by".
 - **Safety in shared space.**
   - Undo only touches your own edits.
   - Importing warns that it replaces the plan for everyone in the room.
-  - Removing a nation explains that its planned conquests go while the provinces it holds stay.
+  - Removing a seated player explains that the nation becomes an AI nation.
+
+## Room management
+
+The admin's page (`/admin`) answers "which rooms can go?":
+
+- **Content, not just dates.** Each room shows who signed up, how many are seated, and what was planned, drawn and conquered; an empty room says so in orange.
+- **The likely candidates first.** The list starts with the rooms unused the longest; the **Unused** and **Inactive** filters show their counts up front.
+- **Bulk with care.** Select all shown or single rooms, then delete them in one step. The confirmation counts the rooms and warns when people are in some of them right now.
 
 ## Test phase
 

@@ -10,14 +10,14 @@ test('German by default, switchable to English without reload', async ({ page })
   await page.goto('/local')
   await joinAs(page, 'Player', 'GER')
   await expect(page.locator('.statusbar')).toContainText('Objekt oder Provinz anklicken')
-  await expect(page.locator('.nation-sub').first()).toContainText('Deutschland')
+  await expect(page.locator('.nation-row:has(.tag.me) .nation-sub')).toContainText('Deutschland')
 
   // Switch in the map's View menu: UI, nation names and status hint follow immediately.
   await page.click('.view-menu .menu-btn')
   await page.click('.view-menu [role=radio]:has-text("English")')
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
   await expect(page.locator('.statusbar')).toContainText('Click an object or province')
-  await expect(page.locator('.nation-sub').first()).toContainText('Germany')
+  await expect(page.locator('.nation-row:has(.tag.me) .nation-sub')).toContainText('Germany')
 
   // The choice is remembered.
   await page.reload()

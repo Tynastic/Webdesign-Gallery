@@ -1,14 +1,16 @@
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import type * as Y from 'yjs'
+import { roleName } from '../../shared/match'
 import { plannedCost } from '../../shared/points'
-import { displayName, distanceFactor, isTeam, phaseVisibility, type Plan } from '../../shared/schema'
+import { distanceFactor, phaseVisibility, type Plan } from '../../shared/schema'
 import { ObjectRenderer } from '../render/objectRenderer'
 import { t } from '../i18n'
 import { fmtNum, fmtPoints, kindLabel, resourceLabel } from '../i18n/format'
 import { escapeHtml } from '../render/icons'
 import { resourceSvg } from '../render/resourceGlyphs'
 import type { SessionState, ToolId } from '../state/session'
+import type { MatchState } from '../sync/match'
 import type { Presence } from '../sync/presence'
 import { MeasureTool } from '../tools/measureTool'
 import { PaintTool, PingTool } from '../tools/paintTool'
@@ -21,6 +23,7 @@ import { copiesIn, nearestCopy, toPoint, wrapX } from './coords'
 import { LabelLayer } from './labelLayer'
 import { MarkLayer, type ProvinceMark } from './markLayer'
 import type { NationCatalog } from './nations'
+import { landFills, muted } from './teamColors'
 import { PresenceLayer } from './presenceLayer'
 import { ProvinceIndex } from './provinceIndex'
 import type { MapData } from './types'
@@ -55,6 +58,9 @@ export class PlannerMap {
   private tool: Tool
   private lastTool: ToolId = 'select'
   private owners: Int16Array
+  /** The nations' Call of War colours, to recognise nation-coloured drawings. */
+  private nationColors = new Set<string>()
+  private shownMode = ''
   private readonly svgRenderers: L.Renderer[]
   private moveFrame = 0
   /** While a pointer is down the view must not jump (it would break a drag that is starting). */
@@ -71,6 +77,7 @@ export class PlannerMap {
     private readonly session: SessionState,
     private readonly undo: Y.UndoManager,
     private readonly presence: Presence,
+    private readonly match: MatchState,
   ) {
     const world = L.latLngBounds([-data.height, 0], [0, data.width])
     this.map = L.map(el, {
@@ -109,6 +116,8 @@ export class PlannerMap {
     const previewRenderer = L.svg({ pane: 'preview', padding: 0.5 })
     this.svgRenderers = [planRenderer, previewRenderer]
     this.objects = new ObjectRenderer(plan, session, planRenderer, { down: (id, e) => this.tool.onObjectDown?.(id, e) }, data.width)
+    this.nationColors = new Set(data.colors)
+    this.objects.displayColor = (c) => this.displayColor(c)
     this.objects.group.addTo(this.map)
     const preview = L.layerGroup().addTo(this.map)
     new PresenceLayer(presence, this.map, data.width).group.addTo(this.map)
@@ -122,12 +131,16 @@ export class PlannerMap {
       data,
       index: this.index,
       nations,
+      nationLabel: (n) => roleName(match.current.roles.get(n), nations.byId.get(n)?.name ?? n),
+      hasPlayers: () => match.current.nationOf.size > 0,
       owners: () => this.owners,
       preview,
       previewRenderer,
       toPoint,
       scale: () => this.map.getZoomScale(this.map.getZoom(), 0),
-      drawColor: () => session.drawColor ?? (session.me ? plan.nations.get(session.me)?.color : undefined) ?? '#ff5a4e',
+      // New drawings: a neutral colour picked in the options bar, else my nation's (Call of War) colour.
+      drawColor: () => session.drawColor ?? (session.me ? match.current.colorOf(session.me) : '#f6f5f0'),
+      displayColor: (c) => this.displayColor(c),
       newObjectBase: () => ({ layerId: session.activeLayer, phaseId: session.activePhase, author: session.me ?? '' }),
       setHint: (key, params) => (session.hint = { key, params }),
       ping: ([x, y]) => presence.ping([wrapX(x, data.width), y]),
@@ -188,8 +201,12 @@ export class PlannerMap {
 
     plan.ownership.observe(() => this.syncOwners())
     plan.assignments.observe(() => this.syncMarks())
-    plan.nations.observe(() => this.syncMarks())
     plan.phases.observe(() => this.syncMarks())
+    // Line-up, players or colour choices changed: land (Teams mode, greyed AI) and markings follow.
+    match.onChange(() => {
+      this.syncStyle()
+      this.syncMarks()
+    })
     plan.objects.observe(() => this.tool.refresh?.())
     // Calibration changed: range labels and the ruler show new distances.
     plan.meta.observe(() => this.syncObjects())
@@ -276,7 +293,14 @@ export class PlannerMap {
   }
 
   syncStyle() {
-    this.base.setStyle(this.session.fillMode, this.session.borders)
+    this.base.setStyle(landFills(this.nations, this.match.current.roles, this.session.fillMode, this.session.aiGrey), this.session.borders)
+    // Entering or leaving the Teams mode changes how markings are coloured.
+    const teams = String(this.session.fillMode === 'teams')
+    if (this.shownMode && teams !== this.shownMode) {
+      this.syncMarks()
+      this.objects?.sync()
+    }
+    this.shownMode = teams
     this.labels.setMode(this.session.labels, this.session.cities, this.session.resources)
     if (this.session.labels || this.session.cities || this.session.resources) this.labels.addTo(this.map)
     else this.labels.remove()
@@ -304,12 +328,12 @@ export class PlannerMap {
     const phases = this.plan.phases.toArray().map((p) => p.id)
     const marks = new Map<number, ProvinceMark>()
     for (const [key, a] of this.plan.assignments) {
-      const entry = this.plan.nations.get(a.nation)
       const nation = this.nations.byId.get(a.nation)
-      if (!entry || !nation) continue
+      if (!nation) continue
       const pid = Number(key)
       marks.set(pid, {
-        color: entry.color,
+        nation: a.nation,
+        color: this.markColor(a.nation),
         visibility: phaseVisibility(a.phaseId, this.session.activePhase, phases),
         done: this.owners[pid] === nation.index,
       })
@@ -318,8 +342,39 @@ export class PlannerMap {
     if (this.tool instanceof PaintTool) this.tool.hint()
   }
 
+  /**
+   * How a colour is shown on the map: the Teams mode mutes nation colours so the team
+   * land stays in front; neutral colours (enemy red, friendly blue, greys) stay as they are.
+   */
+  displayColor(c: string): string {
+    return this.session.fillMode === 'teams' && this.nationColors.has(c) ? muted(c) : c
+  }
+
+  /** Colour of a nation's planned conquests as the map shows them now. */
+  markColor(nation: string): string {
+    return this.displayColor(this.match.current.colorOf(nation))
+  }
+
+  /** Nations holding land, or with planned conquests, in the current view (for the image legend). */
+  nationsInView(): Set<string> {
+    const b = this.map.getBounds()
+    const [x0, x1, y0, y1] = [b.getWest(), b.getEast(), -b.getNorth(), -b.getSouth()]
+    const out = new Set<string>()
+    const n = this.data.provinces.length
+    for (const k of copiesIn(x0, x1, this.data.width)) {
+      const shift = k * this.data.width
+      for (let id = 0; id < n; id++) {
+        if (!this.index.visible(id, x0 - shift, y0, x1 - shift, y1)) continue
+        out.add(this.nations.list[this.owners[id]].id)
+        const a = this.plan.assignments.get(String(id))
+        if (a) out.add(a.nation)
+      }
+    }
+    return out
+  }
+
   focusNation(nationId: string | null) {
-    this.marks.setFocusColor(nationId ? (this.plan.nations.get(nationId)?.color ?? null) : null)
+    this.marks.setFocusNation(nationId)
   }
 
   flyToPoint(x: number, y: number) {
@@ -426,20 +481,24 @@ export class PlannerMap {
     const start = this.nations.startOf(id)
     const a = this.plan.assignments.get(String(id))
     const planned = a ? this.nations.byId.get(a.nation) : undefined
-    const plannedEntry = a ? this.plan.nations.get(a.nation) : undefined
     const phase = a?.phaseId ? this.plan.phases.toArray().find((ph) => ph.id === a.phaseId)?.name : ''
-    const ownerText = displayName(this.plan.nations.get(owner.id), owner.name)
+    const roles = this.match.current.roles
+    const ownerRole = roles.get(owner.id)
+    const team = ownerRole?.team ? ` · ${t(`team.${ownerRole.team}` as const)}` : ownerRole && !ownerRole.player ? ` · ${t('match.ai')}` : ''
+    const ownerText = roleName(ownerRole, owner.name) + team
+    const capital = this.nations.capitals.has(id) ? ` · ★ ${escapeHtml(t('prov.capital'))}` : ''
     const res = p.res ? ` · ${resourceSvg(p.res, 13)} ${escapeHtml(resourceLabel(p.res))} ${fmtNum(p.amount)}` : ''
     const cost =
       a &&
-      plannedCost({ province: id, attacker: a.nation, owner: owner.id, start: start.id, coreNation: p.core ? start.id : null, kind: p.city }, (n) =>
-        isTeam(this.plan.nations.get(n)),
+      plannedCost(
+        { province: id, attacker: a.nation, owner: owner.id, start: start.id, coreNation: p.core ? start.id : null, kind: p.city, capital: this.nations.capitals.has(id) },
+        this.match.current.rules,
       )
     this.tooltip.setContent(
       `<b>${escapeHtml(p.name)}</b><span>${escapeHtml(ownerText)}${owner !== start ? ` · ${escapeHtml(t('tip.conqueredFrom', { nation: start.name }))}` : ''}</span>` +
-        `<span class="tip-kind${p.city ? ' city' : ''}">${escapeHtml(kindLabel(p.city))}${res}</span>` +
-        (planned && plannedEntry && cost
-          ? `<em><i style="background:${plannedEntry.color}"></i>${owner === planned ? '✓ ' : '→ '}${escapeHtml(displayName(plannedEntry, planned.name))}${phase ? ` · ${escapeHtml(phase)}` : ''} · ${escapeHtml(fmtPoints(cost.points))}</em>`
+        `<span class="tip-kind${p.city ? ' city' : ''}">${escapeHtml(kindLabel(p.city))}${capital}${res}</span>` +
+        (planned && cost
+          ? `<em><i style="background:${this.match.current.colorOf(planned.id)}"></i>${owner === planned ? '✓ ' : '→ '}${escapeHtml(roleName(roles.get(planned.id), planned.name))}${phase ? ` · ${escapeHtml(phase)}` : ''} · ${escapeHtml(fmtPoints(cost.points))}</em>`
           : ''),
     )
     if (!this.map.hasLayer(this.tooltip)) this.tooltip.addTo(this.map)

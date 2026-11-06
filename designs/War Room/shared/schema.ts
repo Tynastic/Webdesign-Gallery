@@ -5,15 +5,18 @@
  * writer wins per object), which keeps rendering diff-friendly.
  *
  * Nations are identified by their short code from nations.json (e.g. "GER").
- * Every player plays a nation, but not every nation has a player: a roster entry
- * with an empty nickname is an AI or unclaimed nation.
+ * Players sign up here (`players`); which nation each one plays and the teams are
+ * the line-up, a separate document only organizers may edit (shared/lineup.ts).
+ * A nation without a player is an AI nation.
  *
  * No DOM, no Vue: also loadable by the sync server.
  */
 import * as Y from 'yjs'
 import { nanoid } from 'nanoid'
+import type { LineupSnapshot, Slot } from './lineup'
+import { isPlayable } from './points'
 
-export const SCHEMA_VERSION = 2
+export const SCHEMA_VERSION = 3
 
 /** Transaction origin for edits made by this client; the UndoManager tracks only these. */
 export const LOCAL_ORIGIN = 'local'
@@ -53,16 +56,28 @@ export interface PlanObject {
   locked: boolean
 }
 
-/** A nation taking part in the plan. */
+/**
+ * Per-nation plan settings from schema v2 (marker colour, nickname, team flag).
+ * Kept so older plans and exports load; nations are coloured by their Call of War colour now.
+ */
 export interface PlanNation {
   /** Nation short code, e.g. "GER". */
   id: string
-  /** The human player's nickname; '' = no player (AI / unclaimed). */
-  nickname: string
-  /** Bright marker colour for this nation's plans and drawings (the map colour is too muted). */
+  /** Schema v2: a marker colour. Ignored. */
   color: string
-  /** On the coalition's team (prices its core land as team core land). Unset = has a player. */
+  /** Schema v2: the player's nickname ('' = AI). Migrated into players and the line-up. */
+  nickname?: string
+  /** Schema v2: on "the" team. Has no meaning since there are two teams. */
   team?: boolean
+}
+
+/** Someone taking part in the match. Which nation they play is in the line-up. */
+export interface Player {
+  id: string
+  name: string
+  /** The nation they asked for when signing up; null = no preference. */
+  wish: string | null
+  joinedAt: number
 }
 
 export interface Layer {
@@ -82,12 +97,25 @@ export interface Assignment {
   phaseId: string | null
 }
 
-export const MARKER_COLORS = ['#ff5a4e', '#3d9bff', '#ffd23f', '#22d3a6', '#ff7fd8', '#ff9a2e', '#a77bff', '#5ee0ff', '#b4f04a', '#f2f2f2']
+/**
+ * Colours for generic drawings, as alternatives to the drawer's nation colour:
+ * enemy (opposing force) red and friendly forces blue as on military maps, and neutrals.
+ */
+export const NEUTRAL_COLORS = {
+  opfor: '#d23a35',
+  friendly: '#2f78cf',
+  lightGrey: '#c8c8c2',
+  darkGrey: '#4f4f4a',
+  white: '#f6f5f0',
+  black: '#161613',
+} as const
+export type NeutralColor = keyof typeof NEUTRAL_COLORS
 
 export interface Plan {
   doc: Y.Doc
   meta: Y.Map<unknown>
   nations: Y.Map<PlanNation>
+  players: Y.Map<Player>
   layers: Y.Map<Layer>
   phases: Y.Array<Phase>
   objects: Y.Map<PlanObject>
@@ -101,6 +129,7 @@ export function createPlan(doc = new Y.Doc()): Plan {
     doc,
     meta: doc.getMap('meta'),
     nations: doc.getMap('nations'),
+    players: doc.getMap('players'),
     layers: doc.getMap('layers'),
     phases: doc.getArray('phases'),
     objects: doc.getMap('objects'),
@@ -126,14 +155,6 @@ export function ensureDefaults(plan: Plan, defaults: { title?: string; layerName
       plan.meta.set('schema', SCHEMA_VERSION)
     }
   })
-}
-
-/** Team members get team prices on each other's core land; nations with a player count by default. */
-export const isTeam = (entry: PlanNation | undefined): boolean => !!entry && (entry.team ?? entry.nickname !== '')
-
-/** "Playername (Germany)" for nations with a player, "Germany" otherwise. */
-export function displayName(entry: PlanNation | undefined, nationName: string): string {
-  return entry?.nickname ? `${entry.nickname} (${nationName})` : nationName
 }
 
 // ---------- objects ----------
@@ -180,26 +201,45 @@ export function setOwners(plan: Plan, changes: { province: number; nation: strin
   })
 }
 
-// ---------- roster (nations and their players) ----------
+// ---------- players ----------
 
-/** Add a nation to the plan (no-op if present). An empty nickname means no player. */
-export function addNation(plan: Plan, id: string, nickname = '', color?: string) {
-  if (plan.nations.has(id)) return
-  const used = new Set([...plan.nations.values()].map((n) => n.color))
-  tx(plan, () => plan.nations.set(id, { id, nickname: nickname.trim(), color: color ?? MARKER_COLORS.find((c) => !used.has(c)) ?? MARKER_COLORS[0] }))
+export const cleanName = (name: string) => name.trim().replace(/\s+/g, ' ').slice(0, 24)
+
+/** Signs a player up; returns the id. The line-up decides which nation they play. */
+export function addPlayer(plan: Plan, name: string, wish: string | null = null): string {
+  const id = newId()
+  tx(plan, () => plan.players.set(id, { id, name: cleanName(name), wish: wish && isPlayable(wish) ? wish : null, joinedAt: Date.now() }))
+  return id
 }
 
-export function updateNation(plan: Plan, id: string, patch: Partial<Omit<PlanNation, 'id'>>) {
-  const cur = plan.nations.get(id)
-  if (cur) tx(plan, () => plan.nations.set(id, { ...cur, ...patch }))
+export function updatePlayer(plan: Plan, id: string, patch: Partial<Omit<Player, 'id'>>) {
+  const cur = plan.players.get(id)
+  if (!cur) return
+  const next = { ...cur, ...patch, id }
+  next.name = cleanName(next.name) || cur.name
+  tx(plan, () => plan.players.set(id, next))
 }
 
-/** Removes a nation from the roster and the conquests planned for it. Ownership is history and stays. */
-export function removeNation(plan: Plan, id: string) {
-  tx(plan, () => {
-    plan.nations.delete(id)
-    for (const [key, a] of plan.assignments) if (a.nation === id) plan.assignments.delete(key)
-  })
+/** Removes a player record; callers also release them from the line-up. */
+export function removePlayer(plan: Plan, id: string) {
+  tx(plan, () => plan.players.delete(id))
+}
+
+/**
+ * Schema v2 kept players as nicknames on roster nations. Turns those into players
+ * and line-up slots (teams were a single yes/no flag, so they start unassigned).
+ */
+export function legacyLineup(nations: Iterable<PlanNation>): { players: Player[]; slots: LineupSnapshot } {
+  const players: Player[] = []
+  const slots: LineupSnapshot = {}
+  for (const n of nations) {
+    const name = cleanName(n.nickname ?? '')
+    if (!name || !isPlayable(n.id)) continue
+    const p: Player = { id: newId(), name, wish: n.id, joinedAt: Date.now() }
+    players.push(p)
+    slots[n.id] = { team: null, player: p.id } satisfies Slot
+  }
+  return { players, slots }
 }
 
 // ---------- layers ----------
@@ -305,6 +345,10 @@ export interface PlanSnapshot {
   exportedAt: string
   title: string
   nations: PlanNation[]
+  /** Since v3. */
+  players?: Player[]
+  /** Since v3: the line-up at export time (only organizers can apply it on import). */
+  lineup?: LineupSnapshot
   layers: Layer[]
   phases: Phase[]
   objects: PlanObject[]
@@ -314,13 +358,15 @@ export interface PlanSnapshot {
   dailyPoints?: number
 }
 
-export function exportPlan(plan: Plan): PlanSnapshot {
+export function exportPlan(plan: Plan, lineup?: LineupSnapshot): PlanSnapshot {
   return {
     app: 'cow-planner',
     version: SCHEMA_VERSION,
     exportedAt: new Date().toISOString(),
     title: String(plan.meta.get('title') ?? ''),
     nations: [...plan.nations.values()],
+    players: [...plan.players.values()],
+    lineup,
     layers: [...plan.layers.values()],
     phases: plan.phases.toArray(),
     objects: [...plan.objects.values()],
@@ -330,13 +376,19 @@ export function exportPlan(plan: Plan): PlanSnapshot {
   }
 }
 
-/** Replaces the whole plan with a snapshot (one undoable transaction). */
-export function importPlan(plan: Plan, snap: PlanSnapshot, defaults?: { title?: string; layerName?: string }) {
+/**
+ * Replaces the whole plan with a snapshot (one undoable transaction). Returns the
+ * line-up the file carries (v2 files: derived from their nicknames) for the caller
+ * to apply when allowed.
+ */
+export function importPlan(plan: Plan, snap: PlanSnapshot, defaults?: { title?: string; layerName?: string }): LineupSnapshot | null {
   if (snap?.app !== 'cow-planner') throw new ImportError('not-a-plan')
   if (snap.version > SCHEMA_VERSION) throw new ImportError('newer-version')
   const v1 = snap.version < 2
+  const legacy = !v1 && snap.version < 3 ? legacyLineup(snap.nations ?? []) : null
   tx(plan, () => {
     plan.nations.clear()
+    plan.players.clear()
     plan.layers.clear()
     plan.objects.clear()
     plan.assignments.clear()
@@ -345,7 +397,9 @@ export function importPlan(plan: Plan, snap: PlanSnapshot, defaults?: { title?: 
     plan.meta.set('title', snap.title || defaults?.title || 'Imported plan')
     plan.meta.set('schema', SCHEMA_VERSION)
     setDailyPoints(plan, snap.dailyPoints ?? null)
-    if (!v1) snap.nations.forEach((n) => plan.nations.set(n.id, n))
+    if (!v1) snap.nations.forEach((n) => plan.nations.set(n.id, { id: n.id, color: n.color }))
+    for (const p of legacy?.players ?? snap.players ?? [])
+      if (p?.id && p.name) plan.players.set(p.id, { id: p.id, name: cleanName(p.name), wish: p.wish ?? null, joinedAt: p.joinedAt ?? Date.now() })
     snap.layers.forEach((l) => plan.layers.set(l.id, l))
     plan.phases.push(snap.phases)
     snap.objects.forEach((o) => plan.objects.set(o.id, v1 ? { ...o, author: '' } : o))
@@ -356,4 +410,5 @@ export function importPlan(plan: Plan, snap: PlanSnapshot, defaults?: { title?: 
     }
   })
   ensureDefaults(plan, defaults)
+  return legacy?.slots ?? snap.lineup ?? null
 }

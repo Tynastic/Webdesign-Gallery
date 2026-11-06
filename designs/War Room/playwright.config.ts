@@ -10,5 +10,8 @@ export default defineConfig({
   testDir: 'tests/e2e',
   timeout: 60_000,
   use: { baseURL: external ?? 'http://localhost:5173', viewport: { width: 1440, height: 860 } },
-  webServer: external ? undefined : { command: 'npm run dev', url: 'http://localhost:5173', reuseExistingServer: true, timeout: 60_000 },
+  // The admin tests log in with E2E_ADMIN_PASSWORD (default below); they skip when a reused server has no admin login.
+  webServer: external
+    ? undefined
+    : { command: 'npm run dev', url: 'http://localhost:5173', reuseExistingServer: true, timeout: 60_000, env: { ADMIN_PASSWORD: process.env.E2E_ADMIN_PASSWORD ?? 'e2e-admin' } },
 })

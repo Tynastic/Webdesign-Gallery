@@ -29,6 +29,8 @@ interface Rect { x0: number; y0: number; x1: number; y1: number }
  * bold, and in smaller provinces than the rest. Resource provinces get a glyph
  * (wheat ear, ingot, drop) sized by production. Both markers sit in front of the
  * name and are never dropped for lack of space; names are.
+ *
+ * Capitals get a gold star at every zoom level.
  */
 export class LabelLayer extends L.Layer {
   private canvas!: HTMLCanvasElement
@@ -173,8 +175,10 @@ export class LabelLayer extends L.Layer {
       let right = pt.x
       let h = 0
       if (city) {
-        const r = symbolRadius(p.city, scale)
-        this.citySymbol(pt, r, p.city)
+        const capital = this.nations.capitals.has(id)
+        const r = capital ? CAPITAL_RADIUS : symbolRadius(p.city, scale)
+        if (capital) this.capitalStar(pt, r)
+        else this.citySymbol(pt, r, p.city)
         left = pt.x - r - 1.5
         right = pt.x + r + 1.5
         h = 2 * r + 3
@@ -232,13 +236,40 @@ export class LabelLayer extends L.Layer {
 
   /** Zoomed far out: Doppelstadt (and later city) symbols only, under the nation names. */
   private drawCitySymbols(map: L.Map, scale: number, size: L.Point, shift: number) {
+    // Capitals always show, as stars.
+    for (const id of this.nations.capitals) {
+      const pt = this.anchor(map, this.data.provinces[id].label, shift)
+      if (onScreen(pt, size)) this.capitalStar(pt, CAPITAL_RADIUS * (scale < DOUBLE_SYMBOL_SCALE ? 0.7 : 0.85))
+    }
     if (scale < DOUBLE_SYMBOL_SCALE) return
     for (const id of this.cities) {
       const p = this.data.provinces[id]
       if (p.city === 1 && scale < CITY_SYMBOL_SCALE) break // sorted: Doppelstädte first
+      if (this.nations.capitals.has(id)) continue
       const pt = this.anchor(map, p.label, shift)
       if (onScreen(pt, size)) this.citySymbol(pt, symbolRadius(p.city, scale), p.city)
     }
+  }
+
+  /** A capital: gold five-pointed star with a dark outline on a paper halo. */
+  private capitalStar(pt: L.Point, r: number) {
+    const ctx = this.ctx
+    ctx.beginPath()
+    for (let i = 0; i < 10; i++) {
+      const a = -Math.PI / 2 + (i * Math.PI) / 5
+      const rr = i % 2 ? r * 0.45 : r
+      ctx.lineTo(pt.x + rr * Math.cos(a), pt.y + rr * Math.sin(a))
+    }
+    ctx.closePath()
+    ctx.lineJoin = 'round'
+    ctx.lineWidth = 3.5
+    ctx.strokeStyle = 'rgba(250,246,234,0.95)'
+    ctx.stroke()
+    ctx.fillStyle = '#f1c232'
+    ctx.fill()
+    ctx.lineWidth = 1.2
+    ctx.strokeStyle = '#2a1d06'
+    ctx.stroke()
   }
 
   /** Dot for a city, double ring for a Doppelstadt, on a paper disc. */
@@ -327,6 +358,7 @@ export class LabelLayer extends L.Layer {
 }
 
 const onScreen = (pt: L.Point, size: L.Point) => pt.x > -100 && pt.y > -20 && pt.x < size.x + 100 && pt.y < size.y + 20
+const CAPITAL_RADIUS = 8
 const symbolRadius = (city: number, scale: number) => (city === 2 ? 6 : 3.5) * (scale < NATION_MODE_SCALE ? 0.7 : scale >= 1 ? 1.15 : 1)
 
 const FONT = '"Segoe UI", system-ui, -apple-system, sans-serif'

@@ -11,6 +11,7 @@ import Segmented from './Segmented.vue'
 
 /** How the map is drawn (and the UI language), in a menu docked to the map's bottom-left corner. */
 const fills = computed<{ value: FillMode; label: string }[]>(() => [
+  { value: 'teams', label: t('view.teams') },
   { value: 'vivid', label: t('view.vivid') },
   { value: 'muted', label: t('view.muted') },
   { value: 'off', label: t('view.off') },
@@ -21,9 +22,14 @@ const fills = computed<{ value: FillMode; label: string }[]>(() => [
   <MenuPopover class="view-menu" :label="t('panel.view')" :title="t('view.menuTitle')" placement="above-start" button-class="map-btn chrome-surface">
     <template #button><SlidersHorizontal :size="16" /><span class="menu-btn-label">{{ t('panel.view') }}</span></template>
     <div class="field">
-      <span>{{ t('view.colours') }} <small class="muted">· {{ t('view.coloursHint') }}</small></span>
+      <span>{{ t('view.colours') }} <small class="muted">· {{ session.fillMode === 'teams' ? t('view.teamsHint') : t('view.coloursHint') }}</small></span>
       <Segmented v-model="session.fillMode" :options="fills" :label="t('view.colours')" />
     </div>
+    <label class="toggle">
+      <input v-model="session.aiGrey" type="checkbox" :disabled="session.fillMode === 'off'" />
+      <span class="toggle-track" aria-hidden="true" />
+      <span>{{ t('view.aiGrey') }} <small class="muted">{{ t('view.aiGreyHint') }}</small></span>
+    </label>
     <label class="toggle">
       <input v-model="session.borders" type="checkbox" />
       <span class="toggle-track" aria-hidden="true" />

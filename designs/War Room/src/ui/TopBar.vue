@@ -1,9 +1,14 @@
 <script setup lang="ts">
-import { CircleHelp, Cloud, CloudOff, Download, ImageDown, LoaderCircle, Redo2, Undo2, Upload } from 'lucide-vue-next'
+import { CircleHelp, Cloud, CloudOff, Download, ImageDown, LoaderCircle, Redo2, Undo2, Upload, Users } from 'lucide-vue-next'
 import { computed, nextTick, onBeforeUnmount, ref, shallowRef } from 'vue'
-import { displayName, exportPlan, ImportError, importPlan, LOCAL_ORIGIN, type PlanSnapshot } from '../../shared/schema'
+import { exportLineup, importLineup, TEAMS } from '../../shared/lineup'
+import { PLAYABLE } from '../../shared/points'
+import { exportPlan, ImportError, importPlan, LOCAL_ORIGIN, type PlanSnapshot } from '../../shared/schema'
+import { useMatch } from '../composables/useMatch'
 import { useUndoState } from '../composables/useY'
 import { locale, t } from '../i18n'
+import { teamLabel } from '../i18n/format'
+import { TEAM_SWATCH } from '../map/teamColors'
 import { downloadBlob, exportMapImage } from '../render/exportImage'
 import { confirmAction, toast } from '../state/feedback'
 import { session } from '../state/session'
@@ -14,8 +19,10 @@ import SearchBox from './SearchBox.vue'
 import { toolLabel } from './toolCatalog'
 
 defineProps<{ meName: string }>()
-defineEmits<{ help: []; identity: [] }>()
-const { catalog, plan, undo, handle, planner } = usePlanner()
+defineEmits<{ help: []; identity: []; lineup: [] }>()
+const { plan, lineup, undo, handle, planner } = usePlanner()
+const { byTeam, label, myRole, playersTotal } = useMatch()
+const myTeamColor = computed(() => (myRole.value?.team ? TEAM_SWATCH[myRole.value.team] : null))
 const undoState = useUndoState(undo)
 const status = handle.status
 
@@ -63,7 +70,14 @@ async function exportPng() {
   try {
     const title = String(plan.meta.get('title') ?? t('plan.untitled'))
     const date = new Date().toLocaleDateString(locale.value)
-    const legend = [...plan.nations.values()].map((n) => ({ color: n.color, label: displayName(n, catalog.byId.get(n.id)?.name ?? n.id) }))
+    // Legend: the nations with a player that are in the exported view, team by team, in the colour the map shows.
+    const inView = planner.value!.nationsInView()
+    const legend = ([...TEAMS, null] as const).flatMap((team) =>
+      byTeam.value
+        .get(team)!
+        .filter((r) => r.player && inView.has(r.nation))
+        .map((r, i) => ({ color: planner.value!.markColor(r.nation), label: (i === 0 && team ? `${teamLabel(team)}: ` : '') + label(r.nation) })),
+    )
     const blob = await exportMapImage(map.getContainer(), [t('app.name'), title, date].join(' · '), legend)
     const slug = title.replace(/[^\w-]+/g, '-').toLowerCase() || 'plan'
     downloadBlob(blob, slug + '-' + new Date().toISOString().slice(0, 10) + '.png')
@@ -78,7 +92,7 @@ async function exportPng() {
 }
 
 function exportFile() {
-  const snap = exportPlan(plan)
+  const snap = exportPlan(plan, exportLineup(lineup))
   const blob = new Blob([JSON.stringify(snap, null, 2)], { type: 'application/json' })
   const a = document.createElement('a')
   a.href = URL.createObjectURL(blob)
@@ -103,13 +117,25 @@ async function importFile(e: Event) {
     )
     if (!ok) return
     undo.stopCapturing()
-    importPlan(plan, snap, { title: t('plan.untitled'), layerName: t('layer.general') })
+    const slots = importPlan(plan, snap, { title: t('plan.untitled'), layerName: t('layer.general') })
     undo.stopCapturing()
+    // The line-up is the organizers' to change; everyone else keeps the current one.
+    const lineupApplied = !!slots && handle.canOrganize.value
+    if (lineupApplied) {
+      handle.lineupUndo.stopCapturing()
+      importLineup(lineup, slots)
+      handle.lineupUndo.stopCapturing()
+    }
     session.selectedObject = session.selectedProvince = null
     session.activePhase = null
     session.activeLayer = plan.layers.keys().next().value ?? 'general'
-    if (session.me && !plan.nations.has(session.me)) session.me = null
-    toast(t('file.imported', { title: snap.title }), { label: t('common.undo'), run: () => undo.undo() })
+    toast(t(slots && !lineupApplied ? 'file.importedNoLineup' : 'file.imported', { title: snap.title }), {
+      label: t('common.undo'),
+      run: () => {
+        undo.undo()
+        if (lineupApplied) handle.lineupUndo.undo()
+      },
+    })
   } catch (err) {
     const message = err instanceof ImportError ? t(err.code === 'not-a-plan' ? 'file.notAPlan' : 'file.newer') : (err as Error).message
     toast(t('file.importFailed', { message }))
@@ -142,9 +168,9 @@ async function importFile(e: Event) {
           v-for="p in peers.slice(0, 6)"
           :key="p.clientId"
           class="avatar"
-          :style="{ '--c': p.state.user.color }"
+          :style="{ '--c': p.state.user.color, '--t': p.state.user.team ? TEAM_SWATCH[p.state.user.team] : 'var(--line-strong)' }"
           :class="{ following: session.following === p.clientId }"
-          :title="t('top.followTitle', { name: p.state.user.name, tool: p.state.tool ? toolLabel(p.state.tool) : t('top.viewing') })"
+          :title="t('top.followTitle', { name: p.state.user.nation ? label(p.state.user.nation) : p.state.user.name, tool: p.state.tool ? toolLabel(p.state.tool) : t('top.viewing') })"
           :aria-label="t('top.followAria', { name: p.state.user.name })"
           :aria-pressed="session.following === p.clientId"
           @click="toggleFollow(p)"
@@ -154,7 +180,12 @@ async function importFile(e: Event) {
         <span v-if="peers.length > 6" class="avatar more">+{{ peers.length - 6 }}</span>
         <RoomMenu />
       </div>
-      <button class="me-chip" :title="t('top.identity')" @click="$emit('identity')">{{ meName }}</button>
+      <button class="btn lineup-btn" :title="t('top.lineupTitle')" @click="$emit('lineup')">
+        <Users :size="15" /><span class="menu-btn-label">{{ t('top.lineup') }}</span><span class="lineup-count">{{ playersTotal }}/{{ PLAYABLE.length }}</span>
+      </button>
+      <button class="me-chip" :title="t('top.identity')" @click="$emit('identity')">
+        <span v-if="myTeamColor" class="team-swatch" :style="{ background: myTeamColor }" :title="teamLabel(myRole!.team)" />{{ meName }}
+      </button>
       <div class="btn-group" role="group" :aria-label="t('top.history')">
         <button class="icon-btn" :disabled="!undoState.canUndo" :title="t('common.withKeys', { label: t('top.undo'), keys: `${t('key.ctrl')}+Z` })" :aria-label="t('top.undo')" @click="undo.undo()"><Undo2 :size="18" /></button>
         <button class="icon-btn" :disabled="!undoState.canRedo" :title="t('common.withKeys', { label: t('top.redo'), keys: `${t('key.ctrl')}+${t('key.shift')}+Z` })" :aria-label="t('top.redo')" @click="undo.redo()"><Redo2 :size="18" /></button>

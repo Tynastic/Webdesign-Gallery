@@ -1,47 +1,49 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { MARKER_COLORS, displayName } from '../../shared/schema'
-import { useYMap } from '../composables/useY'
+import { NEUTRAL_COLORS, type NeutralColor } from '../../shared/schema'
 import { t } from '../i18n'
-import { usePlanner } from './context'
 
-/** Marker colour swatches; swatches already used by a nation in the plan are ringed and named. */
-const props = withDefaults(defineProps<{ auto?: boolean; label?: string }>(), { auto: false, label: '' })
+/**
+ * Colour choice for markings: the nation's own (Call of War) colour, or one of four
+ * neutral colours (light grey, dark grey, white, black).
+ *
+ * `nationValue` is what choosing the nation colour stores: null where "nation" is a
+ * default that follows the nation (drawing colour, a nation's planned conquests), or
+ * a concrete colour (an existing drawing).
+ */
+const props = withDefaults(defineProps<{ nationColor?: string | null; nationValue?: string | null; label?: string }>(), {
+  nationColor: null,
+  nationValue: null,
+  label: '',
+})
 const model = defineModel<string | null>({ required: true })
 
-const { catalog, plan } = usePlanner()
-const roster = useYMap(plan.nations)
-const swatches = computed(() => {
-  const byColor = new Map<string, string>()
-  for (const n of roster.value.values()) {
-    const name = displayName(n, catalog.byId.get(n.id)?.name ?? n.id)
-    byColor.set(n.color, byColor.has(n.color) ? `${byColor.get(n.color)}, ${name}` : name)
-  }
-  return MARKER_COLORS.map((c) => ({ color: c, who: byColor.get(c) }))
-})
+const neutrals = computed(() =>
+  (Object.entries(NEUTRAL_COLORS) as [NeutralColor, string][]).map(([key, color]) => ({ color, label: t(`colour.${key}` as const) })),
+)
+const nationSelected = computed(() => model.value === props.nationValue || (props.nationColor !== null && model.value === props.nationColor))
 </script>
 
 <template>
   <div class="swatches" role="radiogroup" :aria-label="props.label || t('colour.label')">
     <button
-      v-if="props.auto"
-      class="swatch-btn auto"
+      v-if="props.nationColor"
+      class="swatch-btn nation"
       role="radio"
-      :aria-checked="model === null"
-      :title="t('colour.autoTitle')"
-      @click="model = null"
+      :aria-checked="nationSelected"
+      :title="t('colour.nationTitle')"
+      @click="model = props.nationValue"
     >
-      {{ t('colour.auto') }}
+      <span class="swatch-dot" :style="{ background: props.nationColor }" />{{ t('colour.nation') }}
     </button>
     <button
-      v-for="s in swatches"
+      v-for="s in neutrals"
       :key="s.color"
       class="swatch-btn"
-      :class="{ claimed: s.who }"
       role="radio"
       :aria-checked="model === s.color"
-      :aria-label="s.who ? `${s.color} (${s.who})` : s.color"
-      :title="s.who ?? s.color"
+      :aria-label="s.label"
+      :title="s.label"
       :style="{ '--c': s.color }"
       @click="model = s.color"
     />

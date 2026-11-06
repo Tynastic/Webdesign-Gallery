@@ -16,14 +16,17 @@ export interface BuildOptions {
   markerPane?: string
   /** Plan calibration factor, for range labels in km. */
   factor?: number
+  /** How a stored colour is shown (the Teams map mutes nation colours). */
+  displayColor?: (c: string) => string
 }
 
 const ll = (pts: Point[]) => pts.map((p) => toLatLng(p[0], p[1]))
 const darker = (c: string) => mix(c, '#000000', 0.45)
 
 /** Leaflet layers for one plan object. Shared by the renderer and the drawing previews. */
-export function buildLayers(o: PlanObject, opt: BuildOptions): L.Layer[] {
-  const { renderer, dim = false, selected = false, interactive = true, markerPane = 'planMarkers', factor = 1 } = opt
+export function buildLayers(stored: PlanObject, opt: BuildOptions): L.Layer[] {
+  const { renderer, dim = false, selected = false, interactive = true, markerPane = 'planMarkers', factor = 1, displayColor } = opt
+  const o = displayColor ? { ...stored, color: displayColor(stored.color) } : stored
   const fade = dim ? 0.35 : 1
   const out: L.Layer[] = []
   const halo = (latlngs: L.LatLngExpression[], closed: boolean) => {
@@ -161,6 +164,8 @@ export class ObjectRenderer {
   private readonly rendered = new Map<string, { key: string; layers: L.Layer[] }>()
   /** World copies (offset k · worldWidth) currently drawn. */
   private copies: number[] = [0]
+  /** How stored colours are shown; set by the map (the Teams mode mutes nation colours). */
+  displayColor: (c: string) => string = (c) => c
 
   constructor(
     private readonly plan: Plan,
@@ -189,11 +194,11 @@ export class ObjectRenderer {
       if (vis === 'hidden' || this.session.hiddenLayers.includes(o.layerId)) continue
       seen.add(o.id)
       const selected = this.session.selectedObject === o.id
-      const key = `${JSON.stringify(o)}|${vis}|${selected}|${this.copies.join()}|${factor}|${locale.value}`
+      const key = `${JSON.stringify(o)}|${this.displayColor(o.color)}|${vis}|${selected}|${this.copies.join()}|${factor}|${locale.value}`
       const cur = this.rendered.get(o.id)
       if (cur?.key === key) continue
       cur?.layers.forEach((l) => this.group.removeLayer(l))
-      const layers = this.copies.flatMap((k) => buildLayers(shiftObject(o, k * this.worldWidth), { renderer: this.renderer, dim: vis === 'dim', selected, factor }))
+      const layers = this.copies.flatMap((k) => buildLayers(shiftObject(o, k * this.worldWidth), { renderer: this.renderer, dim: vis === 'dim', selected, factor, displayColor: this.displayColor }))
       for (const l of layers) {
         l.on('mousedown', (e) => this.handlers.down(o.id, e as L.LeafletMouseEvent))
         this.group.addLayer(l)

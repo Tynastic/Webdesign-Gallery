@@ -3,7 +3,12 @@ import { copiesIn } from './coords'
 import type { ProvinceIndex } from './provinceIndex'
 import type { PhaseVisibility } from '../../shared/schema'
 
+/** Dark edge around markings. */
+const CASING = 'rgba(24,18,10,0.7)'
+
 export interface ProvinceMark {
+  /** Nation that should conquer it. */
+  nation: string
   color: string
   visibility: PhaseVisibility
   /** The assigned nation already holds the province: the planned conquest is achieved. */
@@ -12,15 +17,19 @@ export interface ProvinceMark {
 
 /**
  * Dynamic province overlays: planned conquests ("who conquers what") as tint +
- * diagonal hatching + inner outline in the nation's marker colour (achieved ones
+ * diagonal hatching + inner outline in the nation's marking colour (achieved ones
  * shrink to a slim dashed outline so open work stands out), and hover/selection
  * highlights. Cheap to repaint, so it updates on every hover change.
+ *
+ * Marking colours are the nations' Call of War colours, often close to the land
+ * they are drawn on (and an achieved conquest sits on land of its own colour), so
+ * hatching and outlines carry a dark casing and the dashes alternate with dark ones.
  */
 export class MarkLayer extends CanvasLayer {
   private marks = new Map<number, ProvinceMark>()
   private hovered: number | null = null
   private selected: number | null = null
-  private focusColor: string | null = null
+  private focusNation: string | null = null
   private patterns = new Map<string, CanvasPattern>()
 
   constructor(private readonly index: ProvinceIndex, private readonly worldWidth: number) {
@@ -39,9 +48,10 @@ export class MarkLayer extends CanvasLayer {
     this.redraw()
   }
 
-  /** Emphasise one player's provinces (e.g. while hovering them in the legend). */
-  setFocusColor(color: string | null) {
-    this.focusColor = color
+  /** Emphasise one nation's planned provinces (e.g. while hovering it in the Nations panel). */
+  setFocusNation(nation: string | null) {
+    if (nation === this.focusNation) return
+    this.focusNation = nation
     this.redraw()
   }
 
@@ -59,15 +69,20 @@ export class MarkLayer extends CanvasLayer {
     for (const [id, mark] of this.marks) {
       if (mark.visibility === 'hidden' || !this.index.visible(id, view.x0, view.y0, view.x1, view.y1)) continue
       const path = this.index.paths[id]
-      const dim = mark.visibility === 'dim' || (this.focusColor !== null && this.focusColor !== mark.color)
+      const dim = mark.visibility === 'dim' || (this.focusNation !== null && this.focusNation !== mark.nation)
       ctx.save()
       ctx.clip(path)
       if (mark.done) {
         ctx.globalAlpha = dim ? 0.35 : 0.9
-        ctx.strokeStyle = mark.color
         ctx.lineWidth = px(3.5)
         ctx.setLineDash([px(5), px(4)])
+        ctx.strokeStyle = CASING
         ctx.stroke(path)
+        ctx.lineDashOffset = px(4.5)
+        ctx.strokeStyle = mark.color
+        ctx.stroke(path)
+        ctx.lineDashOffset = 0
+        ctx.setLineDash([])
         ctx.restore()
         continue
       }
@@ -77,8 +92,12 @@ export class MarkLayer extends CanvasLayer {
       ctx.globalAlpha = dim ? 0.3 : 0.75
       ctx.fillStyle = this.pattern(ctx, mark.color, view.scale)
       ctx.fill(path)
-      // Inner outline: stroke twice the width, the clip removes the outer half.
+      // Inner outline: stroke twice the width, the clip removes the outer half. A dark
+      // band inside it separates it from land of the same colour.
       ctx.globalAlpha = dim ? 0.4 : 1
+      ctx.strokeStyle = CASING
+      ctx.lineWidth = px(7)
+      ctx.stroke(path)
       ctx.strokeStyle = mark.color
       ctx.lineWidth = px(5)
       ctx.stroke(path)
@@ -116,13 +135,17 @@ export class MarkLayer extends CanvasLayer {
       const tile = document.createElement('canvas')
       tile.width = tile.height = 10
       const t = tile.getContext('2d')!
-      t.strokeStyle = color
-      t.lineWidth = 2.2
       t.beginPath()
       for (const o of [-10, 0, 10]) {
         t.moveTo(o, 10)
         t.lineTo(o + 10, 0)
       }
+      // Each hatch line on a dark casing, so it reads on any land.
+      t.strokeStyle = CASING
+      t.lineWidth = 3.6
+      t.stroke()
+      t.strokeStyle = color
+      t.lineWidth = 2
       t.stroke()
       pattern = ctx.createPattern(tile, 'repeat')!
       this.patterns.set(color, pattern)

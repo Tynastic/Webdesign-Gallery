@@ -23,6 +23,10 @@ export class NationInfo {
 export class NationCatalog {
   readonly list: NationInfo[]
   readonly byId: Map<string, NationInfo>
+  /** Nation id -> its capital's province id. */
+  readonly capitalOf = new Map<string, number>()
+  /** Province ids of all capitals. */
+  readonly capitals = new Set<number>()
 
   constructor(private readonly data: MapData, file: NationsFile) {
     this.list = data.colors.map((color, index) => {
@@ -31,6 +35,14 @@ export class NationCatalog {
       return new NationInfo(index, entry?.short ?? `N${index}`, color, en, entry?.de ?? en)
     })
     this.byId = new Map(this.list.map((n) => [n.id, n]))
+    data.colors.forEach((color, index) => {
+      const name = file[color]?.capital
+      const p = name ? data.provinces.find((pr) => pr.nation === index && pr.name === name) : undefined
+      if (p) {
+        this.capitalOf.set(this.list[index].id, p.id)
+        this.capitals.add(p.id)
+      }
+    })
   }
 
   /** Sorted by name in the current language, for pickers. */
@@ -94,17 +106,23 @@ export function territoryLabels(data: MapData, owners: Int16Array): TerritoryLab
           stack.push(n)
         }
     }
-    let best = group[0], bestCost = Infinity
-    for (const a of group) {
-      const pa = provinces[a].label
-      let cost = 0
-      for (const b of group) cost += provinces[b].area * Math.hypot(pa[0] - provinces[b].label[0], pa[1] - provinces[b].label[1])
-      if (cost < bestCost) [best, bestCost] = [a, cost]
-    }
-    const area = group.reduce((s, id) => s + provinces[id].area, 0)
-    labels.push({ nation: owner, x: provinces[best].label[0], y: provinces[best].label[1] - 3, area })
+    labels.push({ nation: owner, ...groupAnchor(data, group) })
   }
   return labels.sort((a, b) => b.area - a.area)
+}
+
+/** Label point of a group of provinces: its area-weighted medoid's, so it always lies on land inside the group. */
+export function groupAnchor(data: MapData, group: number[]): { x: number; y: number; area: number } {
+  const provinces = data.provinces
+  let best = group[0], bestCost = Infinity
+  for (const a of group) {
+    const pa = provinces[a].label
+    let cost = 0
+    for (const b of group) cost += provinces[b].area * Math.hypot(pa[0] - provinces[b].label[0], pa[1] - provinces[b].label[1])
+    if (cost < bestCost) [best, bestCost] = [a, cost]
+  }
+  const area = group.reduce((s, id) => s + provinces[id].area, 0)
+  return { x: provinces[best].label[0], y: provinces[best].label[1] - 3, area }
 }
 
 /** Connected provinces sharing the start province's current owner. */

@@ -1,22 +1,37 @@
 <script setup lang="ts">
-import { Plus, Trash2 } from 'lucide-vue-next'
+import { ChevronRight, Users } from 'lucide-vue-next'
 import { computed, ref } from 'vue'
-import { addNation, isTeam, removeNation, updateNation } from '../../shared/schema'
+import { TEAMS, type Team } from '../../shared/lineup'
+import { PLAYABLE } from '../../shared/points'
+import { useMatch } from '../composables/useMatch'
 import { useYMap } from '../composables/useY'
 import { t } from '../i18n'
-import { confirmAction, toast } from '../state/feedback'
+import { teamLabel } from '../i18n/format'
+import { TEAM_SWATCH } from '../map/teamColors'
 import { session } from '../state/session'
-import ColorChooser from './ColorChooser.vue'
+import ClassBadge from './ClassBadge.vue'
 import { usePlanner } from './context'
-import NationSelect from './NationSelect.vue'
 import PanelSection from './PanelSection.vue'
 
-const { catalog, plan, undo, planner } = usePlanner()
-const roster = useYMap(plan.nations)
+/**
+ * Who is who, at a glance: the playable nations grouped by team, each with its
+ * player (or AI), class, land held compared to the start, whether it still holds
+ * its capital, and how its planned conquests are going. Teams and players are
+ * changed in the line-up; this panel only reads them (plus the marker colour).
+ */
+const { data, catalog, plan, planner } = usePlanner()
+const { byTeam, nationName, playersTotal } = useMatch()
 const assignments = useYMap(plan.assignments)
 const ownership = useYMap(plan.ownership)
 
 const owners = computed(() => catalog.owners(ownership.value.entries()))
+const startCount = new Map<number, number>()
+for (const p of data.provinces) startCount.set(p.nation, (startCount.get(p.nation) ?? 0) + 1)
+const held = computed(() => {
+  const c = new Map<number, number>()
+  for (const o of owners.value) c.set(o, (c.get(o) ?? 0) + 1)
+  return c
+})
 /** Planned provinces per nation and how many of them it already holds. */
 const progress = computed(() => {
   const out = new Map<string, { ids: number[]; done: number }>()
@@ -28,93 +43,80 @@ const progress = computed(() => {
   }
   return out
 })
-const held = computed(() => {
-  const c = new Map<number, number>()
-  for (const o of owners.value) c.set(o, (c.get(o) ?? 0) + 1)
-  return c
-})
-const players = computed(() => [...roster.value.values()].filter((n) => n.nickname).length)
 
-const newNation = ref('')
-const newNick = ref('')
-const colorFor = ref<string | null>(null)
-
-function add() {
-  if (!newNation.value) return
-  addNation(plan, newNation.value, newNick.value)
-  session.assignNation ??= newNation.value
-  newNation.value = ''
-  newNick.value = ''
+const collapsed = ref(new Set<Team | null>())
+function toggle(team: Team | null) {
+  const next = new Set(collapsed.value)
+  if (next.has(team)) next.delete(team)
+  else next.add(team)
+  collapsed.value = next
 }
 
-function rename(id: string, e: Event) {
-  updateNation(plan, id, { nickname: (e.target as HTMLInputElement).value.trim() })
-}
+const groups = computed(() =>
+  ([...TEAMS, null] as (Team | null)[])
+    .map((team) => {
+      const roles = byTeam.value.get(team)!
+      return {
+        team,
+        players: roles.filter((r) => r.player).length,
+        rows: roles.map((r) => {
+          const index = catalog.byId.get(r.nation)!.index
+          const now = held.value.get(index) ?? 0
+          const capital = catalog.capitalOf.get(r.nation)
+          const holder = capital === undefined ? null : catalog.list[owners.value[capital]]
+          return {
+            ...r,
+            name: nationName(r.nation),
+            held: now,
+            delta: now - (startCount.get(index) ?? 0),
+            capitalLostTo: holder && holder.id !== r.nation ? holder.name : null,
+            progress: progress.value.get(r.nation),
+          }
+        }),
+      }
+    })
+    .filter((g) => g.rows.length),
+)
 
-async function remove(id: string) {
-  const name = catalog.byId.get(id)?.name ?? id
-  const n = progress.value.get(id)?.ids.length ?? 0
-  if (n && !(await confirmAction(t('nations.confirmTitle', { nation: name }), t('nations.confirmText', { n }), t('common.remove')))) return
-  removeNation(plan, id)
-  if (session.me === id) session.me = null
-  if (session.assignNation === id) session.assignNation = session.me
-  if (session.ownNation === id) session.ownNation = session.me
-  toast(t('nations.removed', { name }), { label: t('common.undo'), run: () => undo.undo() })
-}
-
-function setColor(id: string, c: string | null) {
-  if (c) updateNation(plan, id, { color: c })
-  colorFor.value = null
-}
+const signed = (n: number) => (n > 0 ? `+${n}` : String(n))
 </script>
 
 <template>
-  <PanelSection id="nations" :title="t('panel.nations')" :badge="roster.size ? t('nations.players', { n: players }) : undefined">
-    <p v-if="!roster.size" class="empty-state">{{ t('nations.empty') }}</p>
-    <ul class="rows" @mouseleave="planner?.focusNation(null)">
-      <li v-for="n in roster.values()" :key="n.id" class="row nation-row" @mouseenter="planner?.focusNation(n.id)">
-        <button class="dot-btn" :style="{ background: n.color }" :aria-label="t('nations.markerColour', { nation: catalog.byId.get(n.id)?.name ?? n.id })" :title="t('nations.markerTitle')" @click="colorFor = colorFor === n.id ? null : n.id" />
-        <div class="nation-cell">
-          <input
-            class="row-name"
-            :value="n.nickname"
-            :placeholder="t('nations.noPlayer')"
-            :aria-label="t('nations.playerOf', { nation: catalog.byId.get(n.id)?.name ?? n.id })"
-            maxlength="24"
-            @change="rename(n.id, $event)"
-            @keydown.enter="($event.target as HTMLInputElement).blur()"
-          />
-          <small class="nation-sub">
-            <span class="swatch" :style="{ background: catalog.byId.get(n.id)?.color }" />{{ catalog.byId.get(n.id)?.name }} · {{ t('nations.holds', { n: held.get(catalog.byId.get(n.id)?.index ?? -1) ?? 0 }) }}
-          </small>
-        </div>
-        <span v-if="session.me === n.id" class="tag me" :title="t('nations.youTitle')">{{ t('nations.you') }}</span>
-        <button
-          class="tag team-tag"
-          :aria-pressed="isTeam(n)"
-          :title="t(isTeam(n) ? 'nations.teamOn' : 'nations.teamOff', { nation: catalog.byId.get(n.id)?.name ?? n.id })"
-          @click="updateNation(plan, n.id, { team: !isTeam(n) })"
-        >
-          {{ t('nations.team') }}
-        </button>
-        <button
-          class="count-btn"
-          :disabled="!progress.get(n.id)?.ids.length"
-          :title="progress.get(n.id)?.ids.length ? t('nations.progressTitle') : t('nations.noProgress')"
-          @click="planner?.flyToProvinces(progress.get(n.id)?.ids ?? [])"
-        >
-          {{ progress.get(n.id) ? `${progress.get(n.id)!.done}/${progress.get(n.id)!.ids.length}` : '0' }}
-        </button>
-        <button class="icon-btn sm danger" :aria-label="t('nations.remove', { nation: catalog.byId.get(n.id)?.name ?? n.id })" :title="t('nations.removeTitle')" @click="remove(n.id)"><Trash2 :size="14" /></button>
-        <div v-if="colorFor === n.id" class="row-popover">
-          <ColorChooser :model-value="n.color" :label="t('nations.markerColour', { nation: catalog.byId.get(n.id)?.name ?? n.id })" @update:model-value="setColor(n.id, $event)" />
-        </div>
-      </li>
-    </ul>
-    <form class="add-nation" @submit.prevent="add">
-      <NationSelect v-model="newNation" :label="t('nations.addLabel')" :placeholder="t('nations.addPlaceholder')" :exclude="[...roster.keys()]" />
-      <input v-model="newNick" :placeholder="t('nations.nickPlaceholder')" :aria-label="t('nations.nickLabel')" maxlength="24" />
-      <button class="btn" type="submit" :disabled="!newNation"><Plus :size="14" />{{ t('common.add') }}</button>
-    </form>
+  <PanelSection id="nations" :title="t('panel.nations')" :badge="t('nations.playersOf', { n: playersTotal, of: PLAYABLE.length })">
+    <button class="btn lineup-open" :title="t('nations.lineupTitle')" @click="session.lineupOpen = true"><Users :size="14" />{{ t('nations.lineup') }}<kbd>L</kbd></button>
+    <p v-if="!playersTotal" class="empty-state">{{ t('nations.empty') }}</p>
+    <div v-for="g in groups" :key="g.team ?? 'none'" class="nation-group" :class="`team-${g.team ?? 'none'}`">
+      <button class="nation-group-head" :aria-expanded="!collapsed.has(g.team)" @click="toggle(g.team)">
+        <ChevronRight :size="14" class="chev" />
+        <span class="team-swatch" :style="{ background: g.team ? TEAM_SWATCH[g.team] : TEAM_SWATCH.open }" />
+        <strong>{{ teamLabel(g.team) }}</strong>
+        <span class="muted">{{ t('nations.groupCount', { n: g.players, of: g.rows.length }) }}</span>
+      </button>
+      <ul v-if="!collapsed.has(g.team)" class="rows" @mouseleave="planner?.focusNation(null)">
+        <li v-for="n in g.rows" :key="n.nation" class="row nation-row" :class="{ ai: !n.player }" @mouseenter="planner?.focusNation(n.nation)">
+          <span class="dot lg" :style="{ background: n.color }" :title="t('nations.colourTitle')" />
+          <div class="nation-cell">
+            <span class="nation-main">
+              <strong class="nation-player" :class="{ ai: !n.player }">{{ n.player?.name ?? t('match.ai') }}</strong>
+              <span v-if="session.me === n.nation" class="tag me" :title="t('nations.youTitle')">{{ t('nations.you') }}</span>
+            </span>
+            <small class="nation-sub">
+              {{ n.name }} ·
+              <span :title="t('nations.heldTitle', { n: n.held, delta: signed(n.delta) })">{{ n.held }}<template v-if="n.delta"> ({{ signed(n.delta) }})</template></span>
+              <span v-if="n.capitalLostTo" class="capital-lost" :title="t('nations.capitalLost', { nation: n.capitalLostTo })">★ {{ t('nations.capitalLostShort') }}</span>
+            </small>
+          </div>
+          <ClassBadge :cls="n.cls" />
+          <button
+            class="count-btn"
+            :disabled="!n.progress"
+            :title="n.progress ? t('nations.progressTitle') : t('nations.noProgress')"
+            @click="planner?.flyToProvinces(n.progress?.ids ?? [])"
+          >
+            {{ n.progress ? `${n.progress.done}/${n.progress.ids.length}` : '0' }}
+          </button>
+        </li>
+      </ul>
+    </div>
   </PanelSection>
 </template>

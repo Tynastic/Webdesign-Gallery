@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { LocateFixed, Lock, LockOpen, Trash2 } from 'lucide-vue-next'
 import { computed, onMounted, ref } from 'vue'
-import { deleteObjects, displayName, distanceFactor, updateObject, type ArrowVariant, type FrontVariant, type PlanObject, type ZoneVariant } from '../../shared/schema'
+import { useMatch } from '../composables/useMatch'
+import { deleteObjects, distanceFactor, updateObject, type ArrowVariant, type FrontVariant, type PlanObject, type ZoneVariant } from '../../shared/schema'
 import { useYArray, useYMap } from '../composables/useY'
 import { locale, t } from '../i18n'
 import { kmToRadius, radiusToKm } from '../map/geo'
@@ -16,7 +17,7 @@ import { toolInfo, toolLabel } from './toolCatalog'
 const props = defineProps<{ object: PlanObject }>()
 const { catalog, plan, undo, planner } = usePlanner()
 const layers = useYMap(plan.layers)
-const roster = useYMap(plan.nations)
+const { label, match } = useMatch()
 const phases = useYArray(plan.phases)
 
 const o = computed(() => props.object)
@@ -24,7 +25,7 @@ const patch = (p: Partial<PlanObject>) => updateObject(plan, o.value.id, p)
 const info = computed(() => toolInfo(o.value.type))
 const author = computed(() => {
   const nation = catalog.byId.get(o.value.author)
-  return nation ? displayName(roster.value.get(nation.id), nation.name) : ''
+  return nation ? label(nation.id) : ''
 })
 const meta = useYMap(plan.meta)
 /** Range radius shown and edited in km (converted at the circle's latitude, calibrated). */
@@ -39,6 +40,11 @@ function setRadiusKm(e: Event) {
 const sortedLayers = computed(() => [...layers.value.values()].sort((a, b) => a.order - b.order))
 
 const color = computed({ get: () => o.value.color, set: (c) => c && patch({ color: c }) })
+/** The drawing's nation colour: its author's nation, or mine for drawings without one. */
+const nationColor = computed(() => {
+  const n = catalog.byId.has(o.value.author) ? o.value.author : session.me
+  return n ? match.value.colorOf(n) : null
+})
 const variant = computed({ get: () => o.value.variant, set: (v: string) => patch({ variant: v }) })
 
 const labelInput = ref<HTMLInputElement | null>(null)
@@ -174,7 +180,7 @@ function remove() {
 
     <div class="field">
       <span>{{ t('field.colour') }}</span>
-      <ColorChooser v-model="color" :label="t('field.colour')" />
+      <ColorChooser v-model="color" :nation-color="nationColor" :nation-value="nationColor" :label="t('field.colour')" />
     </div>
 
     <div class="field-row">

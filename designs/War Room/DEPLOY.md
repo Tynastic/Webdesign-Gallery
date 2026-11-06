@@ -152,6 +152,8 @@ curl -s https://<address>/api/admin/stats    -H "Authorization: Bearer $ADMIN_TO
 | Variable | Default | Meaning |
 |---|---|---|
 | `ADMIN_TOKEN` | – | Enables `/api/admin/*` (required by the compose files) |
+| `ADMIN_PASSWORD` | – | Password of the admin user (`/admin`): opens every room without its password, organizes any line-up, manages and deletes rooms. Unset = no admin login. Changing it logs the admin out everywhere |
+| `LIMIT_LOGINS_PER_HOUR` | 10 | Admin login attempts per IP |
 | `DOMAIN` | – | Public host name (Caddy setup only) |
 | `TUNNEL_TOKEN`, `TUNNEL_ARGS` | quick tunnel | Named Cloudflare tunnel (tunnel setup only) |
 | `COMPOSE_FILE` | `docker-compose.yml` | Which setup plain `docker compose` uses |
@@ -186,7 +188,9 @@ Put any HTTPS reverse proxy in front of it. It must forward websocket upgrades o
   - per-IP rate limits and connection caps (IPs are held only in memory);
   - size limits on messages, request bodies and documents;
   - room passwords hashed with scrypt;
-  - owner-only room deletion.
+  - room deletion only by its creator or the admin;
+  - the line-up of a room (teams, who plays which nation) is a separate document that the server makes read-only for everyone but its creator and the admin;
+  - admin sessions are signed (HMAC) and expire after 30 days; admin logins are rate-limited.
 - **Privacy:**
   - no cookies, tracking or third-party requests;
   - Caddy access logs are discarded;

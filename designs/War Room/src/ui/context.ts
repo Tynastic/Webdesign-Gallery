@@ -1,5 +1,6 @@
 import { inject, provide, type InjectionKey, type ShallowRef } from 'vue'
 import type * as Y from 'yjs'
+import type { Lineup } from '../../shared/lineup'
 import type { Plan } from '../../shared/schema'
 import type { PlannerMap } from '../map/createMap'
 import type { NationCatalog } from '../map/nations'
@@ -10,6 +11,7 @@ export interface PlannerContext {
   data: MapData
   catalog: NationCatalog
   plan: Plan
+  lineup: Lineup
   undo: Y.UndoManager
   handle: PlanHandle
   planner: ShallowRef<PlannerMap | null>

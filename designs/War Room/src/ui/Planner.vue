@@ -1,13 +1,15 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch, watchEffect, type Component } from 'vue'
-import { deleteObjects, displayName } from '../../shared/schema'
+import { importLineup } from '../../shared/lineup'
+import { deleteObjects, legacyLineup, LOCAL_ORIGIN } from '../../shared/schema'
 import { useMap } from '../composables/useMap'
+import { useMatch } from '../composables/useMatch'
 import { useYArray, useYMap } from '../composables/useY'
 import { t, tm } from '../i18n'
 import type { NationCatalog } from '../map/nations'
 import type { MapData } from '../map/types'
 import { toast } from '../state/feedback'
-import { loadMe, saveMe, session, type ToolId } from '../state/session'
+import { loadPlayer, savePlayer, session, takeLegacyNation, type ToolId } from '../state/session'
 import type { PlanHandle } from '../sync/planDoc'
 import { CloudOff, Eye, Info, X } from 'lucide-vue-next'
 import ConfirmDialog from './ConfirmDialog.vue'
@@ -16,6 +18,8 @@ import HelpDialog from './HelpDialog.vue'
 import Inspector from './Inspector.vue'
 import JoinDialog from './JoinDialog.vue'
 import LayersPanel from './LayersPanel.vue'
+import LineupDialog from './LineupDialog.vue'
+import MapLegend from './MapLegend.vue'
 import MapViewMenu from './MapViewMenu.vue'
 import NationsPanel from './NationsPanel.vue'
 import PhaseBar from './PhaseBar.vue'
@@ -28,23 +32,55 @@ import TopBar from './TopBar.vue'
 import ZoomControl from './ZoomControl.vue'
 
 const props = defineProps<{ data: MapData; catalog: NationCatalog; handle: PlanHandle }>()
-const { plan, undo, presence, room } = props.handle
+const { plan, lineup, undo, presence, room, match: matchState, canOrganize } = props.handle
 
 const mapEl = ref<HTMLElement | null>(null)
-const planner = useMap(mapEl, props.data, props.catalog, plan, undo, presence)
-providePlanner({ data: props.data, catalog: props.catalog, plan, undo, handle: props.handle, planner })
+const planner = useMap(mapEl, props.data, props.catalog, plan, undo, presence, matchState, { lineup })
+providePlanner({ data: props.data, catalog: props.catalog, plan, lineup, undo, handle: props.handle, planner })
 
-const roster = useYMap(plan.nations)
+const { match, role, label, playerNations } = useMatch({ handle: props.handle, catalog: props.catalog })
+const players = useYMap(plan.players)
 const phases = useYArray(plan.phases)
 const helpOpen = ref(false)
 const status = props.handle.status
 
-// Which nation I play is remembered per room; ask when unknown (spectating is allowed).
-session.me = loadMe(room)
-if (session.me && !plan.nations.has(session.me)) session.me = null
-const joinOpen = ref(!session.me)
+/**
+ * Rooms from before v0.5 kept players as nicknames on nations. The first organizer
+ * to open such a room turns them into players and line-up slots (once).
+ */
+function migrateLegacyRoster() {
+  if (!canOrganize.value || lineup.meta.get('legacyMigrated') || lineup.slots.size) return
+  const legacy = legacyLineup(plan.nations.values())
+  plan.doc.transact(() => legacy.players.forEach((p) => plan.players.set(p.id, p)), LOCAL_ORIGIN)
+  importLineup(lineup, legacy.slots)
+  lineup.doc.transact(() => lineup.meta.set('legacyMigrated', true), LOCAL_ORIGIN)
+  undo.clear()
+  props.handle.lineupUndo.clear()
+}
+migrateLegacyRoster()
+watch(canOrganize, migrateLegacyRoster)
+
+// Which player I am is remembered per room; ask when unknown (spectating is allowed).
+session.player = loadPlayer(room)
+if (!session.player) {
+  // Before v0.5 this browser remembered a nation: continue as its player.
+  const nation = takeLegacyNation(room)
+  session.player = (nation && matchState.current.roles.get(nation)?.player?.id) || null
+}
+if (session.player && !plan.players.has(session.player)) session.player = null
+const joinOpen = ref(!session.player)
+let joinedAt = 0
+// Synchronous: the line-up change from seating myself is handled in the same flush.
+watch(
+  joinOpen,
+  (open) => {
+    if (!open) joinedAt = Date.now()
+  },
+  { flush: 'sync' },
+)
 if (!plan.layers.has(session.activeLayer)) session.activeLayer = plan.layers.keys().next().value ?? 'general'
 if (session.activePhase && !plan.phases.toArray().some((p) => p.id === session.activePhase)) session.activePhase = null
+session.me = matchState.current.nationOf.get(session.player ?? '') ?? null
 session.assignNation = session.me
 session.ownNation = session.me
 
@@ -83,25 +119,38 @@ const sidePanels = computed(() => {
 })
 
 watch(
-  () => session.me,
-  (me) => {
-    saveMe(room, me)
-    if (me) {
-      session.assignNation ??= me
-      session.ownNation ??= me
-    }
+  () => session.player,
+  (p) => savePlayer(room, p),
+)
+// My player was removed (or an import replaced the players): ask again.
+watch(players, (list) => {
+  if (session.player && !list.has(session.player)) {
+    session.player = null
+    joinOpen.value = true
+  }
+})
+// The nation I play follows the line-up, which organizers may change at any time.
+watch(
+  () => (session.player ? (match.value.nationOf.get(session.player) ?? null) : null),
+  (me, before) => {
+    session.me = me
+    if (session.assignNation === before || session.assignNation === null) session.assignNation = me
+    if (session.ownNation === before || session.ownNation === null) session.ownNation = me
+    // Tell me when an organizer seats me; not when I just picked the nation myself.
+    if (me && before !== undefined && me !== before && Date.now() - joinedAt > 1500) toast(t('match.nowPlaying', { nation: props.catalog.byId.get(me)?.name ?? me }))
   },
+  { immediate: true },
 )
 
 // Tell everyone in the room who I am.
 watchEffect(() => {
-  const me = session.me
-  const entry = me ? roster.value.get(me) : undefined
-  const nation = me ? props.catalog.byId.get(me) : undefined
+  const me = role(session.me)
+  const player = session.player ? players.value.get(session.player) : undefined
   presence.setUser({
-    name: entry?.nickname || nation?.name || t('me.spectator'),
-    nation: me,
-    color: entry?.color ?? '#9a9a84',
+    name: player?.name || t('me.spectator'),
+    nation: session.me,
+    color: me?.color ?? '#9a9a84',
+    team: me?.team ?? null,
   })
 })
 
@@ -167,7 +216,7 @@ function stepPhase(dir: 1 | -1) {
 }
 
 function onKey(e: KeyboardEvent) {
-  if (helpOpen.value || joinOpen.value) return
+  if (helpOpen.value || joinOpen.value || session.lineupOpen) return
   if (isTyping(e)) {
     if (e.key === 'Escape') (e.target as HTMLElement).blur()
     return
@@ -192,10 +241,11 @@ function onKey(e: KeyboardEvent) {
     return
   }
   if (e.key === '?') return void (helpOpen.value = true)
+  if (e.key.toLowerCase() === 'l') return void (session.lineupOpen = true)
   if (e.key === '[') return stepPhase(-1)
   if (e.key === ']') return stepPhase(1)
   if ((session.tool === 'assign' || session.tool === 'own') && /^[0-9]$/.test(e.key)) {
-    const ids = [...roster.value.keys()]
+    const ids = playerNations.value.map((r) => r.nation)
     const pick = e.key === '0' ? null : (ids[Number(e.key) - 1] ?? undefined)
     if (pick === undefined) return
     if (session.tool === 'assign') session.assignNation = pick
@@ -209,12 +259,16 @@ function onKey(e: KeyboardEvent) {
 onMounted(() => window.addEventListener('keydown', onKey))
 onBeforeUnmount(() => window.removeEventListener('keydown', onKey))
 
-const meName = () => (session.me ? displayName(roster.value.get(session.me), props.catalog.byId.get(session.me)?.name ?? session.me) : t('me.spectator'))
+const meName = () => {
+  const player = session.player ? players.value.get(session.player) : undefined
+  if (!player) return t('me.spectator')
+  return session.me ? label(session.me) : t('me.bench', { name: player.name })
+}
 </script>
 
 <template>
   <div class="shell">
-    <TopBar :me-name="meName()" @help="helpOpen = true" @identity="joinOpen = true" />
+    <TopBar :me-name="meName()" @help="helpOpen = true" @identity="joinOpen = true" @lineup="session.lineupOpen = true" />
     <Toolbar />
 
     <main class="stage" :class="`tool-${session.tool}`">
@@ -240,7 +294,10 @@ const meName = () => (session.me ? displayName(roster.value.get(session.me), pro
             </div>
             <div class="statusbar chrome-surface" role="status" aria-live="polite"><Info :size="15" class="statusbar-icon" />{{ tm(session.hint) || t('status.ready') }}</div>
           </div>
-          <ZoomControl />
+          <div class="chrome-right">
+            <MapLegend />
+            <ZoomControl />
+          </div>
         </div>
       </div>
       <div v-if="status === 'denied'" class="gone-overlay" role="alertdialog" aria-live="assertive">
@@ -256,6 +313,7 @@ const meName = () => (session.me ? displayName(roster.value.get(session.me), pro
 
     <HelpDialog v-model:open="helpOpen" />
     <JoinDialog v-model:open="joinOpen" />
+    <LineupDialog v-model:open="session.lineupOpen" />
     <ConfirmDialog />
   </div>
 </template>

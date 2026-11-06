@@ -1,10 +1,11 @@
 import type { Awareness } from 'y-protocols/awareness'
+import type { Team } from '../../shared/lineup'
 import type { Point } from '../../shared/schema'
 import type { ToolId } from '../state/session'
 
 /** What each connected client shares about itself (ephemeral, never stored). */
 export interface PresenceState {
-  user: { name: string; nation: string | null; color: string }
+  user: { name: string; nation: string | null; color: string; team?: Team | null }
   cursor: Point | null
   tool: ToolId
   ping: { x: number; y: number; at: number } | null

@@ -1,36 +1,52 @@
 /**
- * The coalition's conquest point system (world_nation_class.csv). Every player
- * nation may conquer a daily allowance of points. A province's price depends on
- * the class of the nation holding it, whether it is that nation's core land, the
- * attacker's or a teammate's core land, and whether it is a province, city or
- * Doppelstadt. Nations without a class (AI minors) cost nothing.
+ * The coalition's conquest point system (sources/world_nation_class.csv). Every
+ * player nation may conquer a daily allowance of points. A province's price
+ * depends on the class of the nation holding it and whether it is a province or
+ * a city (Doppelstädte count as cities):
+ *
+ *   class 1 (large):  province 1, city 4
+ *   class 2 (medium): province 2, city 5
+ *   class 3 (small):  province 3, city 6
+ *
+ * Taking non-core land of the holder, and retaking your own or a teammate's core
+ * land, costs half. A capital always costs 10. Nations without a player are AI
+ * nations: their land is always free.
  *
  * No DOM, no Vue: tested directly against the CSV.
  */
 
-export type NationClass = 1 | 2 | 3 | 4 | 5 | 6
+export type NationClass = 1 | 2 | 3
 /** 0 = province, 1 = city, 2 = Doppelstadt (same as Province.city). */
 export type Kind = 0 | 1 | 2
-export type Category = 'enemyCore' | 'enemyNonCore' | 'teamCore'
+/** Which rule prices the province: a capital, the holder's core land, its non-core land, or a recapture. */
+export type Category = 'capital' | 'core' | 'nonCore' | 'recapture'
 
-/** Player nations by short code (nations.json). */
+/** The 30 playable nations by short code (nations.json). Every other nation is always AI. */
 export const NATION_CLASS: Record<string, NationClass> = {
-  USA: 1, USSR: 1,
-  CHN: 2, BRA: 2,
-  IND: 3, AUS: 3, CAN: 3,
-  GER: 4, FRA: 4, ESP: 4, UK: 4, JPN: 4, ITA: 4,
-  SWE: 5, RSA: 5, POL: 5, ROM: 5, YUG: 5, TUR: 5, ARG: 5, MEX: 5,
-  NED: 6, EGY: 6, IRN: 6, VEN: 6, PER: 6, TIB: 6, SIN: 6, MGL: 6, MAN: 6,
+  USA: 1, USSR: 1, CHN: 1, BRA: 1,
+  CAN: 2, UK: 2, FRA: 2, GER: 2, ITA: 2, ESP: 2, IND: 2, JPN: 2, AUS: 2,
+  MEX: 3, VEN: 3, PER: 3, ARG: 3, RSA: 3, EGY: 3, SWE: 3, NED: 3, POL: 3,
+  YUG: 3, ROM: 3, TUR: 3, IRN: 3, SIN: 3, TIB: 3, MGL: 3, MAN: 3,
 }
 
-/** Points by owner class and category: [province, city, Doppelstadt]. */
-export const COSTS: Record<NationClass, Record<Category, [number, number, number]>> = {
-  1: { enemyCore: [0.5, 2, 4], enemyNonCore: [1, 1.5, 2], teamCore: [0.5, 1.5, 3.5] },
-  2: { enemyCore: [1, 3, 5], enemyNonCore: [1, 1.5, 2], teamCore: [1, 2, 4] },
-  3: { enemyCore: [1.5, 6, 8], enemyNonCore: [1.5, 2, 3.5], teamCore: [1.5, 2.5, 4.5] },
-  4: { enemyCore: [2, 6, 8], enemyNonCore: [1.5, 2, 3.5], teamCore: [1.5, 3, 5] },
-  5: { enemyCore: [3, 7, 9], enemyNonCore: [2, 3, 5], teamCore: [2, 3.5, 5.5] },
-  6: { enemyCore: [4.5, 8, 10], enemyNonCore: [2, 3, 5], teamCore: [2.5, 4, 6] },
+/** Playable nations, largest class first, then by code: the order pickers and the line-up use. */
+export const PLAYABLE: string[] = Object.keys(NATION_CLASS).sort((a, b) => NATION_CLASS[a] - NATION_CLASS[b] || a.localeCompare(b))
+export const isPlayable = (nation: string) => nation in NATION_CLASS
+
+/** Points by holder class: [province, city]. */
+export const PRICES: Record<NationClass, [number, number]> = {
+  1: [1, 4],
+  2: [2, 5],
+  3: [3, 6],
+}
+export const CAPITAL_POINTS = 10
+
+/** What the price depends on besides the province itself: who plays, and who plays together. */
+export interface Rules {
+  /** Class of a nation that has a player; null for AI nations (no player) and nations without a class. */
+  classOf(nation: string): NationClass | null
+  /** Both nations have a player and are on the same team. */
+  mates(a: string, b: string): boolean
 }
 
 export interface CostInput {
@@ -41,26 +57,27 @@ export interface CostInput {
   /** Nation whose core land it is (its original owner), or null for non-core land. */
   coreNation: string | null
   kind: Kind
-  /** Is this nation on the coalition's team? */
-  isTeam: (nation: string) => boolean
+  /** The province is a nation's capital. */
+  capital: boolean
 }
 
 export interface Cost {
   points: number
   category: Category
-  /** null = the owner has no class, so the province is free. */
+  /** null = the holder is an AI nation (or the attacker itself), so the province is free. */
   ownerClass: NationClass | null
+  /** Half price (non-core land or a recapture). */
+  half: boolean
 }
 
-export function conquestCost({ attacker, owner, coreNation, kind, isTeam }: CostInput): Cost {
-  const category: Category =
-    coreNation !== null && (coreNation === attacker || (isTeam(coreNation) && isTeam(attacker)))
-      ? 'teamCore'
-      : coreNation !== null && coreNation === owner
-        ? 'enemyCore'
-        : 'enemyNonCore'
-  const ownerClass = owner === attacker ? null : (NATION_CLASS[owner] ?? null)
-  return { points: ownerClass ? COSTS[ownerClass][category][kind] : 0, category, ownerClass }
+export function conquestCost(c: CostInput, rules: Rules): Cost {
+  const recapture = c.coreNation !== null && c.coreNation !== c.owner && (c.coreNation === c.attacker || rules.mates(c.coreNation, c.attacker))
+  const category: Category = c.capital ? 'capital' : recapture ? 'recapture' : c.coreNation === c.owner ? 'core' : 'nonCore'
+  const ownerClass = c.owner === c.attacker ? null : rules.classOf(c.owner)
+  const half = category === 'recapture' || category === 'nonCore'
+  let points = 0
+  if (ownerClass) points = category === 'capital' ? CAPITAL_POINTS : PRICES[ownerClass][c.kind ? 1 : 0] * (half ? 0.5 : 1)
+  return { points, category, ownerClass, half }
 }
 
 export interface PlannedConquest {
@@ -72,6 +89,7 @@ export interface PlannedConquest {
   start: string
   coreNation: string | null
   kind: Kind
+  capital: boolean
   /** Phase (day) it is planned for; null or absent = unscheduled. */
   phaseId?: string | null
 }
@@ -90,22 +108,22 @@ export interface NationPoints {
   open: number
   /** Achieved conquests. */
   done: number
-  /** Planned provinces whose owner has no class (0 points). */
+  /** Planned provinces held by AI nations (0 points). */
   free: number
   items: PointsItem[]
 }
 
 /** Prices one planned conquest; an achieved one as taken from its original owner. */
-export function plannedCost(c: PlannedConquest, isTeam: (nation: string) => boolean): PointsItem {
+export function plannedCost(c: PlannedConquest, rules: Rules): PointsItem {
   const done = c.owner === c.attacker
-  return { ...conquestCost({ ...c, owner: done ? c.start : c.owner, isTeam }), province: c.province, done, phaseId: c.phaseId ?? null }
+  return { ...conquestCost({ ...c, owner: done ? c.start : c.owner }, rules), province: c.province, done, phaseId: c.phaseId ?? null }
 }
 
 /** Sums the points of every nation's planned conquests. */
-export function planPoints(conquests: Iterable<PlannedConquest>, isTeam: (nation: string) => boolean): Map<string, NationPoints> {
+export function planPoints(conquests: Iterable<PlannedConquest>, rules: Rules): Map<string, NationPoints> {
   const out = new Map<string, NationPoints>()
   for (const c of conquests) {
-    const item = plannedCost(c, isTeam)
+    const item = plannedCost(c, rules)
     let sum = out.get(c.attacker)
     if (!sum) out.set(c.attacker, (sum = { total: 0, open: 0, done: 0, free: 0, items: [] }))
     sum.items.push(item)

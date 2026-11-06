@@ -7,7 +7,8 @@ import type { Message } from '../i18n'
  * Never synced to other players (the shared plan lives in the Yjs doc).
  */
 export type ToolId = 'select' | 'assign' | 'own' | 'arrow' | 'front' | 'zone' | 'unit' | 'objective' | 'text' | 'range' | 'measure' | 'ping'
-export type FillMode = 'vivid' | 'muted' | 'off'
+/** 'teams': land coloured by the holder's team (Axis, Allies, AI); the others by nation. */
+export type FillMode = 'teams' | 'vivid' | 'muted' | 'off'
 /** What the plan tool does on click: plan conquests, or mark planned ones as taken. */
 export type PlanMode = 'plan' | 'taken'
 
@@ -15,7 +16,9 @@ export interface SessionState {
   tool: ToolId
   /** Room id ('local' for the offline plan). */
   room: string
-  /** Nation this viewer plays (per room); drawings default to its marker colour. null = spectator. */
+  /** Player this viewer is (per room); null = spectator. */
+  player: string | null
+  /** Nation this viewer plays, from the line-up; drawings default to its marker colour. null = none (yet). */
   me: string | null
   /** Overrides the marker colour for new drawings; null = use my nation's colour. */
   drawColor: string | null
@@ -38,12 +41,18 @@ export interface SessionState {
   selectedObject: string | null
   selectedProvince: number | null
   fillMode: FillMode
+  /** Grey out nations without a player (AI nations). Switched on whenever the Teams mode is chosen. */
+  aiGrey: boolean
   borders: boolean
   labels: boolean
   /** Highlight cities and Doppelstädte with map symbols and bold labels. */
   cities: boolean
   /** Mark resource provinces with their resource glyph. */
   resources: boolean
+  /** The map legend is expanded. */
+  legend: boolean
+  /** Transient: the line-up dialog is open. */
+  lineupOpen: boolean
   /** Travel speed (km/h) for measurement travel times; null = distance only. */
   measureSpeed: number | null
   /** Transient: uncalibrated length of the last finished measurement (for calibration). */
@@ -59,12 +68,16 @@ export interface SessionState {
 }
 
 const STORAGE_KEY = 'cow-planner.session'
+/** Version of the stored preferences: 2 introduced the Teams colour mode as the default. */
+const PREFS_VERSION = 2
 /** Only preferences are remembered between visits, not transient selection. */
-const PERSISTED: (keyof SessionState)[] = ['measureSpeed', 'fillMode', 'borders', 'labels', 'cities', 'resources', 'arrowVariant', 'unitType', 'objectiveIcon', 'hiddenLayers']
+const PERSISTED: (keyof SessionState)[] = ['measureSpeed', 'fillMode', 'aiGrey', 'borders', 'labels', 'cities', 'resources', 'legend', 'arrowVariant', 'unitType', 'objectiveIcon', 'hiddenLayers']
 
 function restore(): Partial<SessionState> {
   try {
     const raw = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '{}')
+    // Muted was the default before teams existed: switch those viewers to the new default once.
+    if ((raw.v ?? 1) < 2 && raw.fillMode === 'muted') raw.fillMode = 'teams'
     return Object.fromEntries(PERSISTED.filter((k) => k in raw).map((k) => [k, raw[k]]))
   } catch {
     return {}
@@ -74,6 +87,7 @@ function restore(): Partial<SessionState> {
 export const session = reactive<SessionState>({
   tool: 'select',
   room: 'local',
+  player: null,
   me: null,
   drawColor: null,
   arrowVariant: 'attack',
@@ -90,11 +104,15 @@ export const session = reactive<SessionState>({
   hiddenLayers: [],
   selectedObject: null,
   selectedProvince: null,
-  fillMode: 'muted',
+  fillMode: 'teams',
+  aiGrey: true,
   borders: true,
   labels: true,
   cities: true,
   resources: true,
+  // Open by default, except on phones, where it would cover much of the map.
+  legend: typeof matchMedia === 'undefined' || matchMedia('(min-width: 721px)').matches,
+  lineupOpen: false,
   measureSpeed: null,
   measuredKm: null,
   following: null,
@@ -108,7 +126,7 @@ watch(
   () => PERSISTED.map((k) => session[k]),
   () => {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(Object.fromEntries(PERSISTED.map((k) => [k, session[k]]))))
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ v: PREFS_VERSION, ...Object.fromEntries(PERSISTED.map((k) => [k, session[k]])) }))
     } catch {
       /* storage unavailable (private mode): preferences just won't persist */
     }
@@ -116,20 +134,41 @@ watch(
   { deep: true },
 )
 
-/** Which nation I play is remembered per room (and per browser). */
-export function loadMe(room: string): string | null {
+// Choosing a mode sets AI greying to fit it (Teams on, Vivid and Muted off); the toggle stays free to change afterwards.
+watch(
+  () => session.fillMode,
+  (mode, before) => {
+    if (mode === before) return
+    if (mode === 'teams') session.aiGrey = true
+    else if (mode === 'vivid' || mode === 'muted') session.aiGrey = false
+  },
+)
+
+/** Which player I am is remembered per room (and per browser). */
+export function loadPlayer(room: string): string | null {
   try {
-    return localStorage.getItem(`cow-planner.me.${room}`)
+    return localStorage.getItem(`cow-planner.player.${room}`)
   } catch {
     return null
   }
 }
 
-export function saveMe(room: string, nation: string | null) {
+export function savePlayer(room: string, player: string | null) {
   try {
-    if (nation) localStorage.setItem(`cow-planner.me.${room}`, nation)
-    else localStorage.removeItem(`cow-planner.me.${room}`)
+    if (player) localStorage.setItem(`cow-planner.player.${room}`, player)
+    else localStorage.removeItem(`cow-planner.player.${room}`)
   } catch {
     /* storage unavailable */
+  }
+}
+
+/** Before v0.5 this browser remembered the nation it played; used once to find that nation's player. */
+export function takeLegacyNation(room: string): string | null {
+  try {
+    const nation = localStorage.getItem(`cow-planner.me.${room}`)
+    localStorage.removeItem(`cow-planner.me.${room}`)
+    return nation
+  } catch {
+    return null
   }
 }

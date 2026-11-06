@@ -17,6 +17,7 @@ const general = computed<[string, string][]>(() => [
   [`/ · ${t('key.ctrl')} + K`, t('help.search')],
   ['[ · ]', t('help.phases')],
   [t('key.altclick'), t('help.ping')],
+  ['L', t('help.lineup')],
   ['?', t('help.help')],
 ])
 const paint = computed<[string, string][]>(() => [

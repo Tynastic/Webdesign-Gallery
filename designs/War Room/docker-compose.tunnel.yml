@@ -21,6 +21,7 @@ services:
     restart: unless-stopped
     environment:
       ADMIN_TOKEN: ${ADMIN_TOKEN:?set ADMIN_TOKEN in .env}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
       ROOM_TTL_DAYS: ${ROOM_TTL_DAYS:-90}
       LIMIT_ROOMS_PER_HOUR: ${LIMIT_ROOMS_PER_HOUR:-10}
       LIMIT_CONNECTIONS_PER_IP: ${LIMIT_CONNECTIONS_PER_IP:-20}

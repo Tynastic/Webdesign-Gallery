@@ -3,13 +3,15 @@
     "name": "Spain",
     "short": "ESP",
     "provinces": 72,
-    "de": "Spanien"
+    "de": "Spanien",
+    "capital": "Madrid"
   },
   "rgb(178,165,108)": {
     "name": "Soviet Union",
     "short": "USSR",
     "provinces": 267,
-    "de": "Sowjetunion"
+    "de": "Sowjetunion",
+    "capital": "Moscow"
   },
   "rgb(212,146,14)": {
     "name": "Finland",
@@ -21,25 +23,29 @@
     "name": "United Kingdom",
     "short": "UK",
     "provinces": 270,
-    "de": "Vereinigtes Königreich"
+    "de": "Vereinigtes Königreich",
+    "capital": "London"
   },
   "rgb(102,126,134)": {
     "name": "Tibet",
     "short": "TIB",
     "provinces": 41,
-    "de": "Tibet"
+    "de": "Tibet",
+    "capital": "Lhasa"
   },
   "rgb(192,170,145)": {
     "name": "Sweden",
     "short": "SWE",
     "provinces": 52,
-    "de": "Schweden"
+    "de": "Schweden",
+    "capital": "Stockholm"
   },
   "rgb(108,144,147)": {
     "name": "France",
     "short": "FRA",
     "provinces": 284,
-    "de": "Frankreich"
+    "de": "Frankreich",
+    "capital": "Paris"
   },
   "rgb(176,150,83)": {
     "name": "Portugal",
@@ -51,7 +57,8 @@
     "name": "Germany",
     "short": "GER",
     "provinces": 81,
-    "de": "Deutschland"
+    "de": "Deutschland",
+    "capital": "Berlin"
   },
   "rgb(116,143,166)": {
     "name": "Norway",
@@ -63,7 +70,8 @@
     "name": "Poland",
     "short": "POL",
     "provinces": 44,
-    "de": "Polen"
+    "de": "Polen",
+    "capital": "Warsaw"
   },
   "rgb(143,146,92)": {
     "name": "Estonia",
@@ -111,7 +119,8 @@
     "name": "Mexico",
     "short": "MEX",
     "provinces": 44,
-    "de": "Mexiko"
+    "de": "Mexiko",
+    "capital": "Mexico City"
   },
   "rgb(88,124,149)": {
     "name": "Slovakia",
@@ -129,7 +138,8 @@
     "name": "Netherlands",
     "short": "NED",
     "provinces": 75,
-    "de": "Niederlande"
+    "de": "Niederlande",
+    "capital": "Amsterdam"
   },
   "rgb(199,182,0)": {
     "name": "Belgium",
@@ -147,19 +157,22 @@
     "name": "Italy",
     "short": "ITA",
     "provinces": 111,
-    "de": "Italien"
+    "de": "Italien",
+    "capital": "Rome"
   },
   "rgb(205,175,118)": {
     "name": "Canada",
     "short": "CAN",
     "provinces": 82,
-    "de": "Kanada"
+    "de": "Kanada",
+    "capital": "Ottawa"
   },
   "rgb(146,161,90)": {
     "name": "United States",
     "short": "USA",
     "provinces": 260,
-    "de": "Vereinigte Staaten"
+    "de": "Vereinigte Staaten",
+    "capital": "Washington D.C."
   },
   "rgb(194,78,80)": {
     "name": "Chile",
@@ -171,13 +184,15 @@
     "name": "Romania",
     "short": "ROM",
     "provinces": 42,
-    "de": "Rumänien"
+    "de": "Rumänien",
+    "capital": "Bucharest"
   },
   "rgb(149,168,130)": {
     "name": "Yugoslavia",
     "short": "YUG",
     "provinces": 48,
-    "de": "Jugoslawien"
+    "de": "Jugoslawien",
+    "capital": "Belgrad"
   },
   "rgb(113,139,145)": {
     "name": "Bulgaria",
@@ -195,13 +210,15 @@
     "name": "Turkey",
     "short": "TUR",
     "provinces": 58,
-    "de": "Türkei"
+    "de": "Türkei",
+    "capital": "Ankara"
   },
   "rgb(200,128,82)": {
     "name": "Egypt",
     "short": "EGY",
     "provinces": 32,
-    "de": "Ägypten"
+    "de": "Ägypten",
+    "capital": "Cairo"
   },
   "rgb(166,151,83)": {
     "name": "Thailand",
@@ -213,19 +230,22 @@
     "name": "Australia",
     "short": "AUS",
     "provinces": 97,
-    "de": "Australien"
+    "de": "Australien",
+    "capital": "Canberra"
   },
   "rgb(137,159,134)": {
     "name": "Sinkiang",
     "short": "SIN",
     "provinces": 31,
-    "de": "Sinkiang"
+    "de": "Sinkiang",
+    "capital": "Urumchi"
   },
   "rgb(186,154,80)": {
     "name": "British India",
     "short": "IND",
     "provinces": 108,
-    "de": "Britisch-Indien"
+    "de": "Britisch-Indien",
+    "capital": "New Delhi"
   },
   "rgb(117,139,166)": {
     "name": "Afghanistan",
@@ -237,31 +257,36 @@
     "name": "Iran",
     "short": "IRN",
     "provinces": 40,
-    "de": "Iran"
+    "de": "Iran",
+    "capital": "Tehran"
   },
   "rgb(196,101,87)": {
     "name": "Japan",
     "short": "JPN",
     "provinces": 131,
-    "de": "Japan"
+    "de": "Japan",
+    "capital": "Tokyo"
   },
   "rgb(192,97,82)": {
     "name": "Venezuela",
     "short": "VEN",
     "provinces": 21,
-    "de": "Venezuela"
+    "de": "Venezuela",
+    "capital": "Caracas"
   },
   "rgb(167,135,79)": {
     "name": "Peru",
     "short": "PER",
     "provinces": 24,
-    "de": "Peru"
+    "de": "Peru",
+    "capital": "Lima"
   },
   "rgb(100,147,103)": {
     "name": "China",
     "short": "CHN",
     "provinces": 107,
-    "de": "China"
+    "de": "China",
+    "capital": "Chongqing"
   },
   "rgb(208,199,136)": {
     "name": "Guatemala",
@@ -339,13 +364,15 @@
     "name": "Brazil",
     "short": "BRA",
     "provinces": 118,
-    "de": "Brasilien"
+    "de": "Brasilien",
+    "capital": "Rio de Janeiro"
   },
   "rgb(88,135,167)": {
     "name": "Argentina",
     "short": "ARG",
     "provinces": 47,
-    "de": "Argentinien"
+    "de": "Argentinien",
+    "capital": "Buenos Aires"
   },
   "rgb(202,160,106)": {
     "name": "Uruguay",
@@ -363,7 +390,8 @@
     "name": "South Africa",
     "short": "RSA",
     "provinces": 47,
-    "de": "Südafrika"
+    "de": "Südafrika",
+    "capital": "Pretoria"
   },
   "rgb(207,101,77)": {
     "name": "Liberia",
@@ -375,7 +403,8 @@
     "name": "Manchukuo",
     "short": "MAN",
     "provinces": 40,
-    "de": "Mandschukuo"
+    "de": "Mandschukuo",
+    "capital": "Hsinking"
   },
   "rgb(180,171,127)": {
     "name": "Saudi Arabia",
@@ -417,7 +446,8 @@
     "name": "Mongolia",
     "short": "MGL",
     "provinces": 27,
-    "de": "Mongolei"
+    "de": "Mongolei",
+    "capital": "Ulaanbaatar"
   },
   "rgb(129,169,87)": {
     "name": "New Zealand",

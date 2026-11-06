@@ -2,9 +2,9 @@ import { describe, expect, it } from 'vitest'
 import * as Y from 'yjs'
 import {
   addLayer,
-  addNation,
   addObject,
   addPhase,
+  addPlayer,
   assignProvinces,
   createPlan,
   ensureDefaults,
@@ -13,9 +13,9 @@ import {
   LOCAL_ORIGIN,
   phaseVisibility,
   removeLayer,
-  removeNation,
   removePhase,
   setOwners,
+  updatePlayer,
 } from '../shared/schema'
 
 const base = { layerId: 'general', phaseId: null, author: 'p1', variant: 'attack', color: '#f00', label: '' }
@@ -34,32 +34,14 @@ describe('plan model', () => {
     expect(plan.meta.get('title')).toBe('Untitled plan')
   })
 
-  it('gives roster nations distinct marker colours and optional nicknames', () => {
+  it('signs players up with a tidy name and only playable wishes', () => {
     const plan = freshPlan()
-    addNation(plan, 'GER', '  Player ')
-    addNation(plan, 'ITA')
-    expect(plan.nations.get('GER')).toMatchObject({ id: 'GER', nickname: 'Player' })
-    expect(plan.nations.get('ITA')!.nickname).toBe('')
-    expect(plan.nations.get('GER')!.color).not.toBe(plan.nations.get('ITA')!.color)
-  })
-
-  it('does not duplicate a nation', () => {
-    const plan = freshPlan()
-    addNation(plan, 'GER', 'Player')
-    addNation(plan, 'GER', 'Someone else')
-    expect(plan.nations.get('GER')!.nickname).toBe('Player')
-  })
-
-  it('clears a removed nation’s planned conquests but keeps ownership', () => {
-    const plan = freshPlan()
-    addNation(plan, 'GER')
-    addNation(plan, 'ITA')
-    assignProvinces(plan, [1, 2], 'GER', null)
-    assignProvinces(plan, [3], 'ITA', null)
-    setOwners(plan, [{ province: 9, nation: 'GER', original: 'POL' }])
-    removeNation(plan, 'GER')
-    expect([...plan.assignments.keys()]).toEqual(['3'])
-    expect(plan.ownership.get('9')).toBe('GER')
+    const a = addPlayer(plan, '  Max   Mustermann ', 'GER')
+    const b = addPlayer(plan, 'Ann', 'FIN') // Finland is always AI
+    expect(plan.players.get(a)).toMatchObject({ name: 'Max Mustermann', wish: 'GER' })
+    expect(plan.players.get(b)!.wish).toBeNull()
+    updatePlayer(plan, a, { name: '   ' })
+    expect(plan.players.get(a)!.name).toBe('Max Mustermann')
   })
 
   it('stores only provinces that changed hands', () => {
@@ -104,17 +86,42 @@ describe('plan model', () => {
 
   it('round-trips through export/import', () => {
     const plan = freshPlan()
-    addNation(plan, 'GER', 'Player')
+    addPlayer(plan, 'Player', 'GER')
     addPhase(plan, 'Day 1')
     assignProvinces(plan, [5, 6], 'GER', null)
     setOwners(plan, [{ province: 7, nation: 'GER', original: 'POL' }])
     addObject(plan, { ...base, type: 'unit', variant: 'armor', points: [[100, 200]], count: 3 })
-    const snap = JSON.parse(JSON.stringify(exportPlan(plan)))
+    const lineup = { GER: { team: 'axis' as const, player: [...plan.players.keys()][0] } }
+    const snap = JSON.parse(JSON.stringify(exportPlan(plan, lineup)))
 
     const other = freshPlan()
-    addNation(other, 'USA', 'will be replaced')
-    importPlan(other, snap)
-    expect(exportPlan(other)).toMatchObject({ ...snap, exportedAt: expect.any(String) })
+    addPlayer(other, 'will be replaced')
+    expect(importPlan(other, snap)).toEqual(lineup)
+    expect(exportPlan(other, lineup)).toMatchObject({ ...snap, exportedAt: expect.any(String) })
+  })
+
+  it('turns v2 nicknames into players and line-up slots on import', () => {
+    const plan = freshPlan()
+    const v2 = {
+      app: 'cow-planner',
+      version: 2,
+      title: 'v2',
+      nations: [
+        { id: 'GER', nickname: 'Tyo', color: '#ff5a4e', team: true },
+        { id: 'ITA', nickname: '', color: '#3d9bff' },
+        { id: 'FIN', nickname: 'Not playable', color: '#ffd23f' },
+      ],
+      layers: [],
+      phases: [],
+      objects: [],
+      assignments: {},
+      ownership: {},
+    }
+    const slots = importPlan(plan, v2 as never)!
+    const players = [...plan.players.values()]
+    expect(players.map((p) => p.name)).toEqual(['Tyo'])
+    expect(slots).toEqual({ GER: { team: null, player: players[0].id } })
+    expect(plan.nations.get('GER')).toEqual({ id: 'GER', color: '#ff5a4e' })
   })
 
   it('drops v1 player assignments on import and on load', () => {

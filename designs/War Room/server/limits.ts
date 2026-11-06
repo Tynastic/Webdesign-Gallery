@@ -71,5 +71,6 @@ const HOUR = 3_600_000
 export const limiters = {
   rooms: new RateLimiter(config.limits.roomsPerHour, HOUR),
   errors: new RateLimiter(config.limits.errorsPerHour, HOUR),
+  logins: new RateLimiter(config.limits.loginsPerHour, HOUR),
   connections: new ConnectionCounter(config.limits.connectionsPerIp),
 }

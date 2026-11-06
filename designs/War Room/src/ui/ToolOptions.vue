@@ -2,6 +2,7 @@
 import { Eraser, RotateCcw } from 'lucide-vue-next'
 import { computed, ref } from 'vue'
 import { distanceFactor, setDistanceFactor, type ArrowVariant, type FrontVariant, type ZoneVariant } from '../../shared/schema'
+import { useMatch } from '../composables/useMatch'
 import { usePoints } from '../composables/usePoints'
 import { useYArray, useYMap } from '../composables/useY'
 import { t } from '../i18n'
@@ -16,8 +17,8 @@ import PickerMenu from './PickerMenu.vue'
 import Segmented from './Segmented.vue'
 import { toolLabel } from './toolCatalog'
 
-const { catalog, plan, undo } = usePlanner()
-const roster = useYMap(plan.nations)
+const { plan, undo } = usePlanner()
+const { playerNations, label, myRole } = useMatch()
 const layers = useYMap(plan.layers)
 const phases = useYArray(plan.phases)
 
@@ -47,18 +48,25 @@ function resetCalibration() {
   undo.stopCapturing()
 }
 
+/** Nations with a player, my team first; a divider marks where the next team starts. */
 const rosterList = computed(() =>
-  [...roster.value.values()].map((n) => {
-    const nation = catalog.byId.get(n.id)
-    return { id: n.id, color: n.color, mapColor: nation?.color ?? n.color, label: n.nickname || nation?.name || n.id, title: n.nickname ? `${n.nickname} (${nation?.name})` : (nation?.name ?? n.id) }
+  playerNations.value.map((r, i, all) => {
+    return {
+      id: r.nation,
+      color: r.color,
+      label: r.player!.name,
+      title: label(r.nation),
+      team: r.team ?? 'none',
+      newTeam: i > 0 && all[i - 1].team !== r.team,
+    }
   }),
 )
 const paintTarget = computed({
   get: () => (session.tool === 'assign' ? session.assignNation : session.ownNation),
   set: (v: string | null) => (session.tool === 'assign' ? (session.assignNation = v) : (session.ownNation = v)),
 })
-/** The ownership target when it is a nation outside the plan's roster. */
-const otherOwner = computed(() => (session.ownNation && !roster.value.has(session.ownNation) ? session.ownNation : ''))
+/** The ownership target when it is a nation without a chip (AI nations). */
+const otherOwner = computed(() => (session.ownNation && !rosterList.value.some((n) => n.id === session.ownNation) ? session.ownNation : ''))
 function pickOtherOwner(id: string) {
   if (id) session.ownNation = id
 }
@@ -100,7 +108,7 @@ const zones = computed<{ value: ZoneVariant; label: string }[]>(() => [
   { value: 'danger', label: t('variant.danger') },
   { value: 'hold', label: t('variant.hold') },
 ])
-const iconColor = computed(() => session.drawColor ?? (session.me ? roster.value.get(session.me)?.color : undefined) ?? '#ff5a4e')
+const iconColor = computed(() => session.drawColor ?? myRole.value?.color ?? '#f6f5f0')
 </script>
 
 <template>
@@ -110,17 +118,19 @@ const iconColor = computed(() => session.drawColor ?? (session.me ? roster.value
     <template v-if="session.tool === 'assign' || session.tool === 'own'">
       <Segmented v-if="session.tool === 'assign'" v-model="session.planMode" :options="planModes" :label="t('options.planMode')" :title="t('options.planModeTitle')" />
       <div v-if="session.tool === 'own' || session.planMode === 'plan'" class="player-pick" role="radiogroup" :aria-label="session.tool === 'assign' ? t('options.planFor') : t('options.conqueredBy')">
+        <template v-for="(n, i) in rosterList" :key="n.id">
+        <span v-if="n.newTeam" class="pick-sep" aria-hidden="true" />
         <button
-          v-for="(n, i) in rosterList"
-          :key="n.id"
           class="pick-chip"
+          :class="`team-${n.team}`"
           role="radio"
           :aria-checked="paintTarget === n.id"
           :title="`${n.title} (${i + 1})`"
           @click="paintTarget = n.id"
         >
-          <span class="dot" :style="{ background: session.tool === 'own' ? n.mapColor : n.color }" />{{ n.label }}<kbd v-if="i < 9">{{ i + 1 }}</kbd>
+          <span class="dot" :style="{ background: n.color }" />{{ n.label }}<kbd v-if="i < 9">{{ i + 1 }}</kbd>
         </button>
+        </template>
         <button
           class="pick-chip"
           role="radio"
@@ -137,7 +147,7 @@ const iconColor = computed(() => session.drawColor ?? (session.me ? roster.value
         :model-value="otherOwner"
         :label="t('options.otherNationLabel')"
         :placeholder="t('options.otherNation')"
-        :exclude="[...roster.keys()]"
+        :exclude="rosterList.map((n) => n.id)"
         @update:model-value="pickOtherOwner"
       />
       <span v-if="assignPoints" class="to-points" :class="{ over: assignPoints.over }" :title="t('options.pointsTitle')" role="status">{{ assignPoints.text }}<small v-if="assignPoints.days"> · {{ assignPoints.days }}</small></span>
@@ -223,9 +233,9 @@ const iconColor = computed(() => session.drawColor ?? (session.me ? roster.value
       <PickerMenu :label="t('options.drawColour')">
         <template #current>
           <span class="picker-swatch" :style="{ background: iconColor }" />
-          <span v-if="session.drawColor === null" class="picker-text">{{ t('colour.auto') }}</span>
+          <span v-if="session.drawColor === null" class="picker-text">{{ t('colour.nation') }}</span>
         </template>
-        <ColorChooser v-model="session.drawColor" auto :label="t('options.drawColour')" />
+        <ColorChooser v-model="session.drawColor" :nation-color="myRole?.color ?? null" :label="t('options.drawColour')" />
       </PickerMenu>
       <span class="to-sep" />
       <span class="to-target" :title="t('options.targetTitle')">→ {{ target }}</span>

@@ -6,25 +6,26 @@ import type { NationCatalog } from '../map/nations'
 import type { MapData } from '../map/types'
 import { locale } from '../i18n'
 import { session } from '../state/session'
+import type { MatchState } from '../sync/match'
 import type { Presence } from '../sync/presence'
 
 /**
  * Mounts the Leaflet map into `el` and keeps it in step with the session.
  * PlannerMap is markRaw'd: Leaflet objects must never become reactive proxies.
  */
-export function useMap(el: Ref<HTMLElement | null>, data: MapData, catalog: NationCatalog, plan: Plan, undo: Y.UndoManager, presence: Presence) {
+export function useMap(el: Ref<HTMLElement | null>, data: MapData, catalog: NationCatalog, plan: Plan, undo: Y.UndoManager, presence: Presence, match: MatchState, debug: object = {}) {
   const planner = shallowRef<PlannerMap | null>(null)
 
   onMounted(() => {
-    planner.value = markRaw(new PlannerMap(el.value!, data, catalog, plan, session, undo, presence))
+    planner.value = markRaw(new PlannerMap(el.value!, data, catalog, plan, session, undo, presence, match))
     // Dev-only handle for debugging and end-to-end tests.
-    if (import.meta.env.DEV || import.meta.env.VITE_E2E) Object.assign(window, { __cow: { planner: planner.value, plan, session, presence } })
+    if (import.meta.env.DEV || import.meta.env.VITE_E2E) Object.assign(window, { __cow: { planner: planner.value, plan, session, presence, match, ...debug } })
   })
   onBeforeUnmount(() => planner.value?.destroy())
 
   const p = () => planner.value
   watch(() => session.tool, (t) => p()?.setTool(t))
-  watch(() => [session.fillMode, session.borders, session.labels, session.cities, session.resources], () => p()?.syncStyle())
+  watch(() => [session.fillMode, session.aiGrey, session.borders, session.labels, session.cities, session.resources], () => p()?.syncStyle())
   watch(() => [session.selectedProvince, session.selectedObject], () => p()?.syncSelection())
   watch(
     () => [session.activePhase, session.hiddenLayers],

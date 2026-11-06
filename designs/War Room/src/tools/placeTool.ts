@@ -27,7 +27,7 @@ export class PlaceTool implements Tool {
     // Ghost marker under the cursor shows exactly what will be placed.
     this.ctx.preview.clearLayers()
     const obj = { ...this.draft(this.ctx.toPoint(e.latlng)), id: 'ghost', createdAt: 0, locked: false }
-    for (const l of buildLayers(obj, { renderer: this.ctx.previewRenderer, interactive: false, markerPane: 'preview', dim: true })) this.ctx.preview.addLayer(l)
+    for (const l of buildLayers(obj, { renderer: this.ctx.previewRenderer, interactive: false, markerPane: 'preview', dim: true, displayColor: (c) => this.ctx.displayColor(c) })) this.ctx.preview.addLayer(l)
   }
 
   onClick(e: L.LeafletMouseEvent) {
@@ -83,7 +83,7 @@ export class RangeTool implements Tool {
     const radius = Math.hypot(p[0] - this.center[0], p[1] - this.center[1])
     this.ctx.preview.clearLayers()
     const obj = { ...this.draft(radius), id: 'preview', createdAt: 0, locked: false }
-    for (const l of buildLayers(obj, { renderer: this.ctx.previewRenderer, interactive: false, markerPane: 'preview', factor: this.ctx.distanceFactor() }))
+    for (const l of buildLayers(obj, { renderer: this.ctx.previewRenderer, interactive: false, markerPane: 'preview', factor: this.ctx.distanceFactor(), displayColor: (c) => this.ctx.displayColor(c) }))
       this.ctx.preview.addLayer(l)
     this.ctx.preview.addLayer(
       L.polyline([toLatLng(...this.center), toLatLng(...p)], { renderer: this.ctx.previewRenderer, interactive: false, color: '#fff', weight: 1.5, dashArray: '4 4' }),

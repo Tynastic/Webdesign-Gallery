@@ -1,4 +1,7 @@
-/** SQLite storage (node:sqlite, no native modules): rooms, Yjs documents, client errors. */
+/**
+ * SQLite storage (node:sqlite, no native modules): rooms, Yjs documents, client errors.
+ * Each room has two documents: the plan (named by the room id) and its line-up ("<id>:lineup").
+ */
 import { createHash, randomBytes, scryptSync, timingSafeEqual } from 'node:crypto'
 import { mkdirSync } from 'node:fs'
 import { join } from 'node:path'
@@ -46,13 +49,15 @@ const q = {
     'INSERT INTO documents (name, data, updated_at) VALUES (?, ?, ?) ON CONFLICT(name) DO UPDATE SET data = excluded.data, updated_at = excluded.updated_at',
   ),
   deleteDoc: db.prepare('DELETE FROM documents WHERE name = ?'),
+  // Last activity: the newer of the plan and its line-up (or the creation, if neither was ever stored).
   listRooms: db.prepare(`
-    SELECT r.id, r.title, r.password_hash IS NOT NULL AS protected, r.created_at, COALESCE(d.updated_at, r.created_at) AS updated_at
-    FROM rooms r LEFT JOIN documents d ON d.name = r.id
+    SELECT r.id, r.title, r.password_hash IS NOT NULL AS protected, r.created_at,
+           MAX(COALESCE(d.updated_at, r.created_at), COALESCE(l.updated_at, 0)) AS updated_at
+    FROM rooms r LEFT JOIN documents d ON d.name = r.id LEFT JOIN documents l ON l.name = r.id || ':lineup'
     ORDER BY updated_at DESC LIMIT ?`),
   staleRooms: db.prepare(`
-    SELECT r.id FROM rooms r LEFT JOIN documents d ON d.name = r.id
-    WHERE COALESCE(d.updated_at, r.created_at) < ?`),
+    SELECT r.id FROM rooms r LEFT JOIN documents d ON d.name = r.id LEFT JOIN documents l ON l.name = r.id || ':lineup'
+    WHERE MAX(COALESCE(d.updated_at, r.created_at), COALESCE(l.updated_at, 0)) < ?`),
   insertError: db.prepare('INSERT INTO client_errors (created_at, message, stack, path, user_agent, app_version) VALUES (?, ?, ?, ?, ?, ?)'),
   trimErrors: db.prepare('DELETE FROM client_errors WHERE id <= (SELECT MAX(id) - 5000 FROM client_errors)'),
   listErrors: db.prepare('SELECT * FROM client_errors ORDER BY id DESC LIMIT ?'),
@@ -107,6 +112,7 @@ export function createRoom(id: string, title: string, password: string): string 
 export function deleteRoom(id: string) {
   q.deleteRoom.run(id)
   q.deleteDoc.run(id)
+  q.deleteDoc.run(`${id}:lineup`)
 }
 
 export interface RoomSummary {

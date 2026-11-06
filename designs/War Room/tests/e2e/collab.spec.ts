@@ -13,7 +13,7 @@ test('two players share a room live', async ({ browser }) => {
 
   await b.goto(a.url())
   await joinAs(b, 'Max', 'ITA')
-  await expect.poll(() => counts(a).then((c) => c.nations)).toBe(2)
+  await expect.poll(() => counts(a).then((c) => c.players)).toBe(2)
 
   // A conquers Poland; B's map follows.
   await goToProvince(a, 'Warsaw')

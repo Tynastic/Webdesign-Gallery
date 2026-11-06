@@ -6,7 +6,8 @@ test('offline plan: paint, conquer, draw, undo and persist', async ({ page }) =>
   page.on('pageerror', (e) => errors.push(e.message))
   await page.goto('/local')
   await joinAs(page, 'Player', 'GER')
-  await expect(page.locator('.nation-row')).toHaveCount(1)
+  // The offline plan's user organizes it, so they play Germany right away.
+  await expect(page.locator('.nation-row:has(.tag.me)')).toContainText('Deutschland')
   await goToProvince(page, 'Warsaw')
 
   // Plan a stroke of conquests for Germany.
@@ -23,7 +24,7 @@ test('offline plan: paint, conquer, draw, undo and persist', async ({ page }) =>
   await page.mouse.click(588, 456)
   await page.keyboard.up('Shift')
   expect((await counts(page)).owned).toBeGreaterThan(30)
-  await expect(page.locator('.nation-row .count-btn')).toHaveText(/^(\d+)\/\1$/)
+  await expect(page.locator('.nation-row:has(.tag.me) .count-btn')).toHaveText(/^(\d+)\/\1$/)
 
   // Attack arrow, then undo/redo it.
   await page.keyboard.press('a')

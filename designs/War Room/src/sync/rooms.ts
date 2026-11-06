@@ -1,4 +1,5 @@
 /** Room API client, routing helpers and the per-browser list of recently opened rooms. */
+import { adminToken } from './admin'
 
 export interface RoomInfo {
   exists: boolean
@@ -25,7 +26,7 @@ export interface RecentRoom {
 }
 
 export type LegalPageId = 'impressum' | 'datenschutz'
-export type Route = { kind: 'lobby' } | { kind: 'local' } | { kind: 'room'; id: string } | { kind: 'legal'; page: LegalPageId }
+export type Route = { kind: 'lobby' } | { kind: 'admin' } | { kind: 'local' } | { kind: 'room'; id: string } | { kind: 'legal'; page: LegalPageId }
 
 const ROOM_ID = /^[A-Za-z0-9_-]{6,32}$/
 
@@ -33,6 +34,7 @@ export function parseRoute(path = location.pathname): Route {
   const m = path.match(/^\/r\/([^/]+)\/?$/)
   if (m && ROOM_ID.test(m[1])) return { kind: 'room', id: m[1] }
   if (/^\/local\/?$/.test(path)) return { kind: 'local' }
+  if (/^\/admin\/?$/.test(path)) return { kind: 'admin' }
   const legal = path.match(/^\/(impressum|datenschutz)\/?$/)
   if (legal) return { kind: 'legal', page: legal[1] as LegalPageId }
   return { kind: 'lobby' }
@@ -79,9 +81,15 @@ export function ownerToken(id: string): string | null {
   }
 }
 
-/** Deletes a room for everyone (owner only). */
+/** Organizers of a room: its creator (owner token in this browser) and the admin. */
+export const canOrganizeRoom = (id: string) => !!ownerToken(id) || !!adminToken()
+
+/** What the sync server checks: the room password, and the organizer credentials this browser holds. */
+export const credentials = (id: string, password = '') => JSON.stringify({ pw: password, owner: ownerToken(id) ?? '', admin: adminToken() })
+
+/** Deletes a room for everyone (its creator or the admin). */
 export async function deleteRoom(id: string): Promise<void> {
-  const res = await fetch(`/api/rooms/${encodeURIComponent(id)}`, { method: 'DELETE', headers: { Authorization: `Bearer ${ownerToken(id) ?? ''}` } })
+  const res = await fetch(`/api/rooms/${encodeURIComponent(id)}`, { method: 'DELETE', headers: { Authorization: `Bearer ${ownerToken(id) || adminToken()}` } })
   if (!res.ok) throw new Error((await res.json().catch(() => null))?.error ?? `HTTP ${res.status}`)
   forgetRoom(id)
   try {

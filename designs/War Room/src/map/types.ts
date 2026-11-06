@@ -59,6 +59,8 @@ export interface Nation {
   /** Short code, unique; used as the nation id in plans (e.g. "GER"). */
   short: string
   provinces: number
+  /** Name of its capital's province (playable nations); checked by tests. */
+  capital?: string
 }
 
 /** Keyed by fill colour, e.g. "rgb(168,71,65)". */

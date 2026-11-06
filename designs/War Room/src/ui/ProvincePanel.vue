@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { Castle, CircleCheck, LocateFixed, RotateCcw, X } from 'lucide-vue-next'
 import { computed } from 'vue'
-import { assignProvinces, displayName, setOwners } from '../../shared/schema'
+import { assignProvinces, setOwners } from '../../shared/schema'
+import { useMatch } from '../composables/useMatch'
 import { usePoints } from '../composables/usePoints'
 import { useYArray, useYMap } from '../composables/useY'
 import { t } from '../i18n'
-import { categoryLabel, classLabel, fmtNum, fmtPoints, kindLabel, resourceLabel } from '../i18n/format'
+import { categoryLabel, classLabel, fmtNum, fmtPoints, kindLabel, resourceLabel, teamLabel } from '../i18n/format'
 import { session } from '../state/session'
 import { usePlanner } from './context'
 import NationSelect from './NationSelect.vue'
@@ -13,7 +14,7 @@ import ResourceIcon from './ResourceIcon.vue'
 
 const props = defineProps<{ id: number }>()
 const { data, catalog, plan, undo, planner } = usePlanner()
-const roster = useYMap(plan.nations)
+const { match, role, label, playersTotal } = useMatch()
 const phases = useYArray(plan.phases)
 const assignments = useYMap(plan.assignments)
 const ownership = useYMap(plan.ownership)
@@ -23,7 +24,13 @@ const owners = computed(() => catalog.owners(ownership.value.entries()))
 const start = computed(() => catalog.startOf(props.id))
 const owner = computed(() => catalog.list[owners.value[props.id]])
 const conquered = computed(() => owner.value.id !== start.value.id)
-const ownerName = computed(() => displayName(roster.value.get(owner.value.id), owner.value.name))
+const ownerName = computed(() => label(owner.value.id))
+/** Team of the holder ("Axis"), or "AI" for nations without a player. */
+const ownerSide = computed(() => {
+  const r = role(owner.value.id)
+  return r?.player ? (r.team ? teamLabel(r.team) : '') : t('match.ai')
+})
+const capitalOf = computed(() => (catalog.capitals.has(props.id) ? start.value.name : null))
 const assignment = computed(() => assignments.value.get(String(props.id)))
 const achieved = computed(() => !!assignment.value && assignment.value.nation === owner.value.id)
 
@@ -53,15 +60,23 @@ const cost = computed(() => {
   const attacker = assignment.value?.nation ?? session.me
   if (!attacker || (!assignment.value && owner.value.id === attacker)) return null
   const c = costFor(props.id, attacker)
-  const name = displayName(roster.value.get(attacker), catalog.byId.get(attacker)?.name ?? attacker)
-  return { ...c, text: t('points.costLine', { points: fmtPoints(c.points), name }) }
+  const name = label(attacker)
+  return { ...c, text: t('points.costLine', { points: fmtPoints(c.points), name }), rule: costRule(c) }
 })
+/** How the price comes about, e.g. "Class 2 · city 5 × ½". */
+function costRule(c: ReturnType<typeof costFor>): string {
+  if (!c.ownerClass) return c.points ? '' : t('points.freeRule')
+  if (c.category === 'capital') return t('points.capitalRule')
+  const base = t(province.value.city ? 'points.cityBase' : 'points.provinceBase', { points: fmtNum(c.points * (c.half ? 2 : 1)) })
+  return `${classLabel(c.ownerClass)} · ${base}${c.half ? ' × ½' : ''}`
+}
 
 const neighbors = computed(() =>
   province.value.neighbors
     .map((id) => {
       const o = catalog.list[owners.value[id]]
-      const planned = roster.value.get(assignments.value.get(String(id))?.nation ?? '')
+      const nation = assignments.value.get(String(id))?.nation
+      const planned = nation ? { name: label(nation), color: match.value.colorOf(nation) } : undefined
       return { id, name: data.provinces[id].name, color: o.color, nation: o.id, foreign: o.id !== owner.value.id, planned }
     })
     .sort((a, b) => Number(b.foreign) - Number(a.foreign) || a.name.localeCompare(b.name)),
@@ -80,7 +95,7 @@ function pick(id: number) {
       <span class="swatch lg" :style="{ background: owner.color }" />
       <div class="insp-title">
         <strong class="province-name">{{ province.name }}</strong>
-        <small class="muted">{{ ownerName }}<template v-if="conquered"> · {{ t('prov.conqueredFrom', { nation: start.name }) }}</template></small>
+        <small class="muted">{{ ownerName }}<template v-if="ownerSide"> · {{ ownerSide }}</template><template v-if="conquered"> · {{ t('prov.conqueredFrom', { nation: start.name }) }}</template></small>
       </div>
       <button class="icon-btn" :title="t('prov.zoom')" :aria-label="t('prov.zoom')" @click="planner?.flyToProvince(id)"><LocateFixed :size="16" /></button>
       <button class="icon-btn" :title="t('prov.deselect')" :aria-label="t('prov.deselect')" @click="session.selectedProvince = null"><X :size="16" /></button>
@@ -102,14 +117,14 @@ function pick(id: number) {
       </div>
     </div>
 
-    <div class="assign-box" :class="{ achieved }" :style="{ '--c': roster.get(plannedModel)?.color ?? 'transparent' }">
+    <div class="assign-box" :class="{ achieved }" :style="{ '--c': plannedModel ? match.colorOf(plannedModel) : 'transparent' }">
       <div class="field">
         <span>{{ t('prov.planned') }} <small class="muted">· {{ t('prov.plannedHint') }}</small></span>
-        <NationSelect v-model="plannedModel" :label="t('prov.plannedLabel')" :placeholder="t('prov.nobody')" roster-only />
+        <NationSelect v-model="plannedModel" :label="t('prov.plannedLabel')" :placeholder="t('prov.nobody')" players-only />
       </div>
-      <p v-if="!roster.size" class="muted fine">{{ t('prov.noNations') }}</p>
+      <p v-if="!playersTotal" class="muted fine">{{ t('prov.noNations') }}</p>
       <p v-if="cost" class="cost-line" :title="t('points.costTitle')">
-        <strong>{{ cost.text }}</strong> · {{ categoryLabel(cost.category) }} · {{ classLabel(cost.ownerClass) }}
+        <strong>{{ cost.text }}</strong> · {{ categoryLabel(cost.category) }}<template v-if="cost.rule"> · {{ cost.rule }}</template>
       </p>
       <p v-if="achieved" class="done-text">
         <CircleCheck :size="15" />{{ t('prov.taken', { name: ownerName }) }}
@@ -118,7 +133,7 @@ function pick(id: number) {
         </button>
       </p>
       <button v-else-if="assignment" class="btn mark-taken" :title="t('prov.markTakenTitle')" @click="markTaken([id], true)">
-        <Castle :size="14" />{{ t('prov.markTaken', { name: roster.get(assignment.nation)?.nickname || catalog.byId.get(assignment.nation)?.name || assignment.nation }) }}
+        <Castle :size="14" />{{ t('prov.markTaken', { name: role(assignment.nation)?.player?.name || catalog.byId.get(assignment.nation)?.name || assignment.nation }) }}
       </button>
       <div v-if="assignment && phases.length" class="field">
         <span>{{ t('prov.inPhase') }}</span>
@@ -132,6 +147,7 @@ function pick(id: number) {
     <h3 class="sub">{{ t('prov.production') }}</h3>
     <div class="prod-tags">
       <span class="tag kind-tag" :class="{ city: province.city }"><span class="kind-sym" :class="`k${province.city}`" />{{ kindLabel(province.city) }}</span>
+      <span v-if="capitalOf" class="tag capital-tag" :title="t('prov.capitalTitle', { nation: capitalOf })">★ {{ t('prov.capital') }}</span>
       <span v-if="province.core" class="tag" :title="t('prov.coreTitle', { nation: start.name })">{{ t('prov.core') }}</span>
       <span v-else class="tag warn" :title="t('prov.nonCoreTitle')">{{ t('prov.nonCore') }}</span>
     </div>
@@ -156,7 +172,7 @@ function pick(id: number) {
     <h3 class="sub">{{ t('prov.neighbours') }} <span class="muted">({{ neighbors.length }})</span></h3>
     <ul v-if="neighbors.length" class="chips">
       <li v-for="n in neighbors" :key="n.id">
-        <button class="chip" :class="{ foreign: n.foreign }" :title="n.planned ? t('prov.plannedFor', { name: n.planned.nickname || n.nation }) : n.foreign ? t('prov.heldByNation', { nation: n.nation }) : ''" @click="pick(n.id)">
+        <button class="chip" :class="{ foreign: n.foreign }" :title="n.planned ? t('prov.plannedFor', { name: n.planned.name }) : n.foreign ? t('prov.heldByNation', { nation: n.nation }) : ''" @click="pick(n.id)">
           <span class="swatch" :style="{ background: n.color }" />
           {{ n.name }}
           <span v-if="n.foreign" class="chip-tag">{{ n.nation }}</span>

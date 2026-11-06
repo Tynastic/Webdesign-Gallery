@@ -29,11 +29,15 @@ export const config = {
   trustProxy: process.env.TRUST_PROXY === '1' || process.env.TRUST_PROXY === 'true',
   /** Enables the /api/admin/* endpoints (errors, room stats). Unset = disabled. */
   adminToken: process.env.ADMIN_TOKEN ?? '',
+  /** Password of the admin user: enters every room, organizes any line-up, deletes rooms. Unset = no admin login. */
+  adminPassword: process.env.ADMIN_PASSWORD ?? '',
   /** Rooms without any activity for this many days are deleted. */
   roomTtlDays: int('ROOM_TTL_DAYS', 90),
   limits: {
     roomsPerHour: int('LIMIT_ROOMS_PER_HOUR', 10),
     errorsPerHour: int('LIMIT_ERRORS_PER_HOUR', 30),
+    /** Admin login attempts per IP. */
+    loginsPerHour: int('LIMIT_LOGINS_PER_HOUR', 10),
     connectionsPerIp: int('LIMIT_CONNECTIONS_PER_IP', 20),
     /** Largest single websocket message (a sync update). */
     maxMessageBytes: int('LIMIT_MESSAGE_BYTES', 2 * 1024 * 1024),

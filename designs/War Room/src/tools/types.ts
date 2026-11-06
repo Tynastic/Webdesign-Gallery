@@ -13,6 +13,10 @@ export interface ToolContext {
   data: MapData
   index: ProvinceIndex
   nations: NationCatalog
+  /** "Tyo (Germany)" for nations with a player, else the nation's name. */
+  nationLabel(nation: string): string
+  /** Some nation has a player (planning conquests needs one). */
+  hasPlayers(): boolean
   /** Current owner (nation index) per province. */
   owners(): Int16Array
   /** Layer group for transient previews (cleared by tools themselves). */
@@ -22,8 +26,10 @@ export interface ToolContext {
   toPoint(latlng: L.LatLng): Point
   /** Screen pixels per map unit at the current zoom. */
   scale(): number
-  /** Colour for new drawings: explicit override, else my nation's marker colour. */
+  /** Colour for new drawings: explicit override, else my nation's colour. */
   drawColor(): string
+  /** How a stored colour is shown on the map (the Teams mode mutes nation colours). */
+  displayColor(c: string): string
   /** Common fields for new objects: active layer, active phase, author. */
   newObjectBase(): Pick<PlanObject, 'layerId' | 'phaseId' | 'author'>
   /** Short contextual instruction shown in the status bar. */

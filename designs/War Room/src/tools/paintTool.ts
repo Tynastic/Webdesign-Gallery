@@ -1,5 +1,5 @@
 import type L from 'leaflet'
-import { assignProvinces, displayName, setOwners } from '../../shared/schema'
+import { assignProvinces, setOwners } from '../../shared/schema'
 import { connectedTerritory } from '../map/nations'
 import type { Tool, ToolContext } from './types'
 
@@ -56,10 +56,10 @@ export class PaintTool implements Tool {
 
   hint() {
     const t = this.target
-    const name = t ? displayName(this.ctx.plan.nations.get(t), this.ctx.nations.byId.get(t)?.name ?? t) : null
+    const name = t ? this.ctx.nationLabel(t) : null
     if (this.taking) return this.ctx.setHint('hint.taken.active')
     if (this.id === 'assign') {
-      if (!this.ctx.plan.nations.size) return this.ctx.setHint('hint.assign.noNations')
+      if (!this.ctx.hasPlayers()) return this.ctx.setHint('hint.assign.noNations')
       if (name) this.ctx.setHint('hint.assign.active', { name })
       else this.ctx.setHint('hint.assign.erase')
     } else if (name) this.ctx.setHint('hint.own.active', { name })

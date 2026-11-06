@@ -2,7 +2,6 @@ import { CanvasLayer, flatPath, useMapSpace, type View } from './canvasLayer'
 import { copiesIn } from './coords'
 import type { ProvinceIndex } from './provinceIndex'
 import type { MapData } from './types'
-import type { FillMode } from '../state/session'
 
 const OCEAN_DEEP = '#7fa6bb'
 const OCEAN = '#9dbfd0'
@@ -23,8 +22,8 @@ export class BaseMapLayer extends CanvasLayer {
   private nationBorders = new Path2D()
   private provinceBorders = new Path2D()
   private owners: Int16Array
-  private readonly fills: { vivid: string[]; muted: string[] }
-  private fillMode: FillMode = 'muted'
+  /** Fill per nation index (see teamColors.ts: landFills); null = Off, plain paper. */
+  private fills: string[] | null
   private borders = true
 
   constructor(private readonly data: MapData, private readonly index: ProvinceIndex) {
@@ -33,11 +32,7 @@ export class BaseMapLayer extends CanvasLayer {
     this.coast = join(data.edges.coast)
     this.owners = Int16Array.from(data.provinces, (p) => p.nation)
     this.rebuildBorders()
-    this.fills = {
-      vivid: data.colors,
-      // Muted: pull nation colours toward paper so player markings stand out (figure/ground).
-      muted: data.colors.map((c) => mix(c, PAPER, 0.55)),
-    }
+    this.fills = data.colors
   }
 
   /** Current owner (nation index) per province. */
@@ -54,8 +49,9 @@ export class BaseMapLayer extends CanvasLayer {
     this.provinceBorders = province
   }
 
-  setStyle(fillMode: FillMode, borders: boolean) {
-    this.fillMode = fillMode
+  /** Land colours (per nation index, null = paper) and whether province borders show. */
+  setStyle(fills: string[] | null, borders: boolean) {
+    this.fills = fills
     this.borders = borders
     this.redraw()
   }
@@ -100,7 +96,7 @@ export class BaseMapLayer extends CanvasLayer {
     ctx.globalAlpha = 1
 
     // Land.
-    const colors = this.fillMode === 'off' ? null : this.fills[this.fillMode]
+    const colors = this.fills
     each((shift) => {
       for (let id = 0; id < this.data.provinces.length; id++) {
         if (!this.index.visible(id, view.x0 - shift, view.y0, view.x1 - shift, view.y1)) continue

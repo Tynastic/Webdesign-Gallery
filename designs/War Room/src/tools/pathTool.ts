@@ -126,7 +126,7 @@ export class PathTool implements Tool {
     this.ctx.preview.clearLayers()
     if (pts.length < 2) return
     const obj = { ...this.draft(pts), id: 'preview', createdAt: 0, locked: false }
-    for (const l of buildLayers(obj, { renderer: this.ctx.previewRenderer, interactive: false, markerPane: 'preview' })) this.ctx.preview.addLayer(l)
+    for (const l of buildLayers(obj, { renderer: this.ctx.previewRenderer, interactive: false, markerPane: 'preview', displayColor: (c) => this.ctx.displayColor(c) })) this.ctx.preview.addLayer(l)
   }
 }
 

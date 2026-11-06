@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { Castle, ChevronRight, CircleCheck, RotateCcw } from 'lucide-vue-next'
 import { computed, ref } from 'vue'
-import { displayName, setDailyPoints } from '../../shared/schema'
+import { setDailyPoints } from '../../shared/schema'
+import { useMatch } from '../composables/useMatch'
 import { usePoints } from '../composables/usePoints'
-import { useYArray, useYMap } from '../composables/useY'
+import { useYArray } from '../composables/useY'
 import { t } from '../i18n'
 import { categoryLabel, classLabel, fmtNum, fmtPoints, kindLabel } from '../i18n/format'
 import { toast } from '../state/feedback'
@@ -17,7 +18,7 @@ import PanelSection from './PanelSection.vue'
  * marked as taken from here, like with the ownership tool.
  */
 const { data, catalog, plan, undo, planner } = usePlanner()
-const roster = useYMap(plan.nations)
+const { match, label } = useMatch()
 const phases = useYArray(plan.phases)
 const { byNation, scoped, scope, allowance, markTaken } = usePoints()
 const expanded = ref<string | null>(null)
@@ -27,16 +28,22 @@ const days = computed(() => Math.max(1, scope.value.phases.length))
 /** While planning for a nation, its row comes first and stands out. */
 const current = computed(() => (session.tool === 'assign' ? session.assignNation : null))
 
+const TEAM_ORDER = { axis: 0, allies: 1 } as const
+const teamRank = (id: string) => {
+  const team = match.value.roles.get(id)?.team
+  return team ? TEAM_ORDER[team] : 2
+}
 const rows = computed(() =>
-  [...roster.value.values()]
-    .filter((n) => byNation.value.has(n.id))
-    .sort((a, b) => Number(b.id === current.value) - Number(a.id === current.value))
-    .map((n) => {
-      const p = scoped.value.get(n.id)!
+  [...byNation.value.keys()]
+    .filter((id) => catalog.byId.has(id))
+    .sort((a, b) => Number(b === current.value) - Number(a === current.value) || teamRank(a) - teamRank(b) || label(a).localeCompare(label(b)))
+    .map((id) => {
+      const p = scoped.value.get(id)!
       return {
-        id: n.id,
-        color: n.color,
-        name: displayName(n, catalog.byId.get(n.id)?.name ?? n.id),
+        id,
+        team: match.value.roles.get(id)?.team ?? 'none',
+        color: match.value.colorOf(id),
+        name: label(id),
         p,
         done: p.items.filter((i) => i.done).length,
         free: p.items.filter((i) => i.ownerClass === null).length,
@@ -98,7 +105,7 @@ function take(ids: number[], taken: boolean) {
 
     <p v-if="!rows.length" class="empty-state">{{ t('points.empty') }}</p>
     <ul class="points-list">
-      <li v-for="r in rows" :key="r.id" class="points-row" :class="{ over: r.over, current: r.id === current }">
+      <li v-for="r in rows" :key="r.id" class="points-row" :class="[`team-${r.team}`, { over: r.over, current: r.id === current }]">
         <button class="points-head" :aria-expanded="expanded === r.id" :title="t('points.details', { name: r.name })" @click="expanded = expanded === r.id ? null : r.id">
           <ChevronRight :size="14" class="points-chev" />
           <span class="dot" :style="{ background: r.color }" />
@@ -125,7 +132,7 @@ function take(ids: number[], taken: boolean) {
               <button class="points-item-main" :title="i.phaseId ? phaseName.get(i.phaseId)?.name : t('prov.anyTime')" @click="pick(i.province)">
                 <span class="kind-sym" :class="`k${data.provinces[i.province].city}`" :title="kindLabel(data.provinces[i.province].city)" />
                 <span class="points-item-name">{{ data.provinces[i.province].name }}</span>
-                <span class="points-item-cat" :title="`${categoryLabel(i.category)} · ${classLabel(i.ownerClass)}`">{{ categoryLabel(i.category) }} · {{ classLabel(i.ownerClass) }}</span>
+                <span class="points-item-cat" :title="`${categoryLabel(i.category)} · ${classLabel(i.ownerClass)}`">{{ categoryLabel(i.category) }}<template v-if="i.half"> ½</template> · {{ classLabel(i.ownerClass) }}</span>
                 <b>{{ fmtPoints(i.points) }}</b>
               </button>
               <button

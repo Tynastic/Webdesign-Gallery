@@ -1,7 +1,9 @@
 <script setup lang="ts">
-import { ArrowRight, CloudOff, LayoutList, Lock, LogIn, Plus, Search } from 'lucide-vue-next'
+import { ArrowRight, CloudOff, LayoutList, Lock, LogIn, LogOut, Plus, Search, ShieldCheck } from 'lucide-vue-next'
 import { computed, onMounted, ref } from 'vue'
 import { LOCALES, locale, t } from '../i18n'
+import { relativeTime as ago } from '../i18n/format'
+import { adminLogout, adminStatus, isAdmin } from '../sync/admin'
 import { createRoom, listRooms, recentRooms, roomIdFromInput, storePassword, type RoomSummary } from '../sync/rooms'
 import Segmented from './Segmented.vue'
 import Toasts from './Toasts.vue'
@@ -42,6 +44,13 @@ onMounted(async () => {
   rooms.value = (await listRooms()) ?? 'offline'
 })
 
+// ---------- admin: login and room management live on /admin ----------
+/** The server offers an admin login (ADMIN_PASSWORD is set). */
+const adminEnabled = ref(false)
+onMounted(async () => {
+  adminEnabled.value = (await adminStatus())?.enabled ?? false
+})
+
 interface RoomRow {
   id: string
   title: string
@@ -64,15 +73,6 @@ const shown = computed(() => {
   const q = filter.value.trim().toLocaleLowerCase()
   return q ? rows.value.filter((r) => (r.title || t('plan.untitled')).toLocaleLowerCase().includes(q)) : rows.value
 })
-
-/** "5 minutes ago" / "vor 5 Minuten" in the current language. */
-function ago(time: number) {
-  const rtf = new Intl.RelativeTimeFormat(locale.value, { numeric: 'auto' })
-  const minutes = Math.round((time - Date.now()) / 60000)
-  if (Math.abs(minutes) < 60) return rtf.format(minutes, 'minute')
-  const hours = Math.round(minutes / 60)
-  return Math.abs(hours) < 48 ? rtf.format(hours, 'hour') : rtf.format(Math.round(hours / 24), 'day')
-}
 </script>
 
 <template>
@@ -122,6 +122,7 @@ function ago(time: number) {
             <input v-model="filter" type="search" :placeholder="t('lobby.filter')" :aria-label="t('lobby.filter')" autocomplete="off" />
           </label>
         </div>
+        <p v-if="isAdmin" class="admin-note"><ShieldCheck :size="14" />{{ t('admin.note') }} <a href="/admin">{{ t('manage.open') }}</a></p>
         <p v-if="rooms === 'offline'" class="muted fine">{{ t('lobby.roomsOffline') }}</p>
         <p v-if="rooms === null" class="muted">{{ t('lobby.roomsLoading') }}</p>
         <p v-else-if="!rows.length" class="muted">{{ t('lobby.roomsEmpty') }}</p>
@@ -139,6 +140,8 @@ function ago(time: number) {
                 <small class="muted" :title="new Date(r.activeAt).toLocaleString(locale)">{{ t('lobby.active', { ago: ago(r.activeAt) }) }}</small>
               </span>
             </a>
+>>>>
+
           </li>
         </ul>
       </section>
@@ -148,6 +151,11 @@ function ago(time: number) {
       <span class="beta">{{ t('beta.badge') }} {{ version }}</span>
       <a href="/impressum">{{ t('legal.impressum') }}</a>
       <a href="/datenschutz">{{ t('legal.privacy') }}</a>
+      <!-- <template v-if="isAdmin">
+        <a href="/admin" class="link-icon"><ShieldCheck :size="13" />{{ t('manage.title') }}</a>
+        <button class="link-btn" @click="adminLogout"><LogOut :size="13" />{{ t('admin.logout') }}</button>
+      </template>
+      <a v-else-if="adminEnabled" href="/admin" class="link-icon"><ShieldCheck :size="13" />{{ t('admin.login') }}</a> -->
     </footer>
     <div class="lobby-toasts"><Toasts /></div>
   </main>

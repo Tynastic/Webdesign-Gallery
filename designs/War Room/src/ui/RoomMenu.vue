@@ -3,6 +3,7 @@ import { Copy, KeyRound, Link, Share2, Trash2 } from 'lucide-vue-next'
 import { onMounted, ref } from 'vue'
 import { t } from '../i18n'
 import { confirmAction, toast } from '../state/feedback'
+import { isAdmin } from '../sync/admin'
 import { deleteRoom, getRoom, ownerToken, roomUrl } from '../sync/rooms'
 import { usePlanner } from './context'
 import MenuPopover from './MenuPopover.vue'
@@ -52,8 +53,8 @@ async function remove() {
     <button class="btn primary room-copy" @click="copy"><Copy :size="14" />{{ t('room.copy') }}</button>
     <p class="room-fact"><KeyRound :size="13" />{{ isProtected ? t('room.protected') : t('room.open') }}</p>
     <p class="muted fine">{{ t('room.expiry') }}</p>
-    <div v-if="isOwner" class="menu-foot">
-      <p class="muted fine">{{ t('room.owner') }}</p>
+    <div v-if="isOwner || isAdmin" class="menu-foot">
+      <p class="muted fine">{{ isOwner ? t('room.owner') : t('room.admin') }}</p>
       <button class="btn danger-outline" :disabled="deleting" @click="remove"><Trash2 :size="14" />{{ t('room.delete') }}</button>
     </div>
   </MenuPopover>
