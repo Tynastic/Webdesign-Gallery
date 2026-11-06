@@ -100,6 +100,8 @@ docker compose up -d --build
 
 Caddy obtains the HTTPS certificate automatically.
 
+**No VPS?** Oracle Cloud's Always Free tier includes an ARM VM in Frankfurt that runs this setup for free. The step-by-step guide is in [DEPLOY.md](DEPLOY.md#c-oracle-cloud-always-free-vm).
+
 ### Before inviting testers
 
 - **Fill in the legal pages:** replace the yellow placeholders in `server/legal/*.html` (Impressum, Datenschutz). They take effect without a rebuild.

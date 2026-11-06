@@ -1,11 +1,12 @@
 # Deploying and running War Room
 
-The app is a single Node process. It serves the client, the room API and the live-sync websocket, and stores everything in one SQLite file in the `data` volume. Docker Compose puts it behind either a Cloudflare Tunnel or Caddy for HTTPS. Expect roughly 100–200 MB of RAM for a handful of rooms.
+The app is a single Node process. It serves the client, the room API and the live-sync websocket, and stores everything in one SQLite file in the `data` volume. Docker Compose puts it behind either a Cloudflare Tunnel or Caddy for HTTPS; setup C runs the Caddy setup on a free Oracle Cloud VM. Expect roughly 100–200 MB of RAM for a handful of rooms.
 
 | Setup | Compose file | When to use it |
 |---|---|---|
 | **A. Cloudflare Tunnel** | `docker-compose.tunnel.yml` | Home PC or WSL. No port forwarding, no public IPv4 needed (works on DS-Lite), home IP stays hidden |
 | **B. Caddy** | `docker-compose.yml` | VPS or any machine reachable on ports 80/443 with a domain. Automatic Let's Encrypt certificates |
+| **C. Oracle Cloud Free VM** | `docker-compose.yml` | Setup B on a free, always-on VM in Frankfurt. No home PC needed |
 
 Either way, set `ADMIN_TOKEN` in `.env` (`openssl rand -base64 32`). Create and edit `.env` inside WSL or Linux, because Windows line endings would leave a stray `\r` in the values.
 
@@ -76,6 +77,110 @@ This needs a public IPv4 address, so DS-Lite connections can't use it.
    `New-NetFirewallHyperVRule -Name WarRoom -DisplayName "War Room" -Direction Inbound -VMCreatorId '{40E0AC32-46A5-438A-A0B2-2B479E8F2E90}' -Protocol TCP -LocalPorts 80,443`
 3. On the router, give the PC a fixed LAN IP and forward TCP 80/443 (and UDP 443) to it.
 4. Use a dynamic-DNS hostname (for example MyFRITZ! or DuckDNS) as `DOMAIN`.
+
+## C. Oracle Cloud Always Free VM
+
+Oracle's Always Free tier includes ARM (Ampere A1) VMs with up to 2 OCPUs and 12 GB of RAM in total. One small VM runs setup B without any changes, and the images used here are available for ARM. Oracle changes free-tier limits from time to time, so check the current [Always Free resources](https://docs.oracle.com/en-us/iaas/Content/FreeTier/freetier_topic-Always_Free_Resources.htm) before you start.
+
+### 1. Create the account
+
+1. Sign up at [oracle.com/cloud/free](https://www.oracle.com/cloud/free/). A credit card is needed for verification; Always Free resources are not charged.
+2. ⚠️ **Choose *Germany Central (Frankfurt)* as the home region.** It can't be changed later, and Always Free VMs only run in the home region. Frankfurt keeps the data in the EU, which keeps the privacy notice simple.
+3. **Optional, recommended later: upgrade to *Pay As You Go*** (Billing → Upgrade and Manage Payment).
+   - Always Free resources stay free.
+   - Oracle stops reclaiming idle free VMs. A free-tier VM can be stopped if it stays almost idle for 7 days, and a planning tool between game evenings can look idle.
+   - "Out of capacity" errors become rarer.
+   - Anything beyond the free limits is billed, so set a budget with an alert at 1 € first (Billing → Budgets).
+
+### 2. Create the VM
+
+Under Compute → Instances → **Create instance**:
+
+| Setting | Value |
+|---|---|
+| Image | Canonical Ubuntu 24.04 (the aarch64 build is picked automatically for Ampere) |
+| Shape | Ampere → `VM.Standard.A1.Flex`, **1 OCPU, 6 GB** (well within the free limit; up to 2 OCPUs / 12 GB in total) |
+| Networking | Create a new VCN with a **public subnet**, and assign a public IPv4 address |
+| SSH keys | Upload your own public key (`ssh-keygen -t ed25519` creates one), or download the generated key pair and keep the private key safe |
+| Boot volume | The default 47–50 GB is enough (up to 200 GB in total are free) |
+
+If it fails with **"Out of capacity for shape"**, try another availability domain (Frankfurt has three) or try again later. Upgrading to Pay As You Go usually helps too.
+
+Note the instance's **public IP address**. Connect as `ubuntu`:
+
+```sh
+ssh ubuntu@<public-ip>
+```
+
+### 3. Open ports 80 and 443
+
+There are two firewalls, and both need the ports.
+
+1. **Oracle's network (security list).** Instance → subnet → *Default Security List* → **Add Ingress Rules**, with source CIDR `0.0.0.0/0`:
+   - TCP, destination port `80`
+   - TCP, destination port `443`
+   - UDP, destination port `443` (HTTP/3)
+
+   SSH (TCP 22) is already open.
+2. **The VM's own iptables.** Oracle's Ubuntu images reject everything except SSH. Don't enable `ufw`; add the rules in front of the final `REJECT` and save them:
+
+   ```sh
+   sudo iptables -I INPUT 6 -m state --state NEW -p tcp --dport 80 -j ACCEPT
+   sudo iptables -I INPUT 6 -m state --state NEW -p tcp --dport 443 -j ACCEPT
+   sudo iptables -I INPUT 6 -m state --state NEW -p udp --dport 443 -j ACCEPT
+   sudo netfilter-persistent save
+   ```
+
+### 4. Install Docker
+
+```sh
+sudo apt update && sudo apt upgrade -y
+curl -fsSL https://get.docker.com | sudo sh        # Docker Engine, Compose and Buildx
+sudo usermod -aG docker ubuntu
+exit                                                # log in again so the group applies
+```
+
+### 5. Get a domain name
+
+Caddy needs a host name that points to the VM. A free one is enough:
+
+1. Sign in at [duckdns.org](https://www.duckdns.org), add a subdomain (for example `warroom-xyz`), and set its IP to the VM's public IP.
+2. Check from your PC: `nslookup warroom-xyz.duckdns.org` should return that IP.
+
+The public IP stays the same as long as the instance exists, including across reboots. If you ever recreate the VM, update the DuckDNS entry. Your own domain works the same way, with an `A` record.
+
+### 6. Deploy
+
+```sh
+git clone https://github.com/Tynastic/Webdesign-Gallery.git war-room
+cd "war-room/designs/War Room"
+cp .env.example .env
+nano .env                                          # DOMAIN=warroom-xyz.duckdns.org
+echo "ADMIN_TOKEN=$(openssl rand -base64 32)" >> .env
+export APP_COMMIT=$(git rev-parse --short HEAD)
+docker compose up -d --build                       # the first build takes a few minutes
+docker compose logs -f app                         # wait for "War Room … on http://localhost:1234"
+```
+
+- **Private repository:** clone over SSH with a [deploy key](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/managing-deploy-keys) (a read-only key for this repository only), or with a fine-grained personal access token.
+- **`.env` is created on the VM,** so it already has Linux line endings, and it is never committed.
+- **Check it:** open `https://<your-domain>` and create a test room. The first request can take a few seconds while Caddy obtains the certificate. If it fails, `docker compose logs caddy` usually names the cause: a wrong DNS entry, or port 80 blocked by one of the two firewalls in step 3.
+
+### 7. Before inviting testers
+
+- **Legal pages.** Fill in `server/legal/*.html` (see [Legal pages](#legal-pages)). Under "Hosting", name Oracle as the hosting provider, with the server location *Frankfurt am Main, Germany*. Take the contracting Oracle entity and its address from your account's agreement. Oracle's data processing agreement is part of its cloud service terms. Either commit the filled-in pages, or edit them on the VM; in that case `git pull` may stop with a conflict when the templates change upstream.
+- **Daily backups.** Add the cron line from [Backups](#backups) with `crontab -e`, adjusting the path to `/home/ubuntu/war-room/designs/War Room`. Backups stay on the VM, so copy them to your PC now and then:
+
+  ```sh
+  # on the VM
+  docker compose cp app:/data/backups ./backups
+  # on your PC
+  scp -r "ubuntu@<public-ip>:war-room/designs/War Room/backups" .
+  ```
+
+- **Security updates.** Ubuntu installs security updates automatically (`unattended-upgrades`). Reboot now and then with `sudo reboot`; the containers come back by themselves.
+
+To update the app later, run `git pull` and then follow [Updating](#updating).
 
 ## Legal pages
 
