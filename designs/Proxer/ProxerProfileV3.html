@@ -1,0 +1,801 @@
+<!DOCTYPE html>
+<html lang="de">
+
+<head>
+    <meta charset="UTF-8">
+    <style>
+        /* Preview only: simulates Proxer's gray page. Do not paste into Proxer. */
+        body { background: #a9abaf; margin: 0; padding: 40px 12px; }
+
+        /* ---------- Base ---------- */
+        .ty-profile {
+            max-width: 900px;
+            margin: 0 auto;
+            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+            font-size: 15px;
+            line-height: 1.5;
+            color: #232227;
+        }
+
+        .ty-profile a { color: inherit; text-decoration: none; }
+
+        .ty-card {
+            background: #fcfcfb;
+            border-radius: 14px;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, .08), 0 10px 30px rgba(0, 0, 0, .12);
+            padding: 32px 36px;
+            margin-bottom: 28px;
+            animation: ty-rise .7s cubic-bezier(.2, .7, .3, 1) backwards;
+        }
+
+        .ty-card:nth-child(2) { animation-delay: .1s; }
+        .ty-card:nth-child(3) { animation-delay: .2s; }
+
+        .ty-head {
+            display: flex;
+            align-items: baseline;
+            gap: 14px;
+            margin-bottom: 24px;
+        }
+
+        .ty-num {
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 12px;
+            letter-spacing: .15em;
+            color: #6d5fa3;
+        }
+
+        .ty-title {
+            font-family: Georgia, 'Book Antiqua', Palatino, serif;
+            font-size: 26px;
+            font-weight: normal;
+            margin: 0;
+        }
+
+        .ty-head::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: #e4e2de;
+            align-self: center;
+        }
+
+        .ty-muted { color: #8a8790; font-size: 12px; }
+
+        /* ---------- Hero ---------- */
+        .ty-hero-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            gap: 24px;
+            flex-wrap: wrap;
+            margin-bottom: 28px;
+        }
+
+        .ty-eyebrow {
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 12px;
+            letter-spacing: .2em;
+            text-transform: uppercase;
+            color: #6d5fa3;
+        }
+
+        .ty-name {
+            font-family: Georgia, 'Book Antiqua', Palatino, serif;
+            font-size: 52px;
+            font-weight: normal;
+            line-height: 1.05;
+            margin: 6px 0 8px;
+        }
+
+        .ty-intro { margin: 0; max-width: 420px; color: #4a4850; }
+        .ty-intro em { color: #6d5fa3; }
+
+        /* ---------- Shelf ---------- */
+        .ty-wall {
+            background: linear-gradient(#f1efeb, #e9e6e0);
+            border-radius: 10px;
+            padding: 18px 18px 6px;
+            overflow-x: auto;
+        }
+
+        .ty-shelf {
+            position: relative;
+            margin-bottom: 26px;
+            min-width: 620px;
+        }
+
+        /* wooden plank */
+        .ty-shelf::after {
+            content: '';
+            position: absolute;
+            left: -6px;
+            right: -6px;
+            bottom: -12px;
+            height: 12px;
+            border-radius: 2px;
+            background: linear-gradient(#c9a275 0, #b48a5a 40%, #8c6a43 100%);
+            box-shadow: 0 10px 12px -6px rgba(0, 0, 0, .35);
+        }
+
+        .ty-row {
+            display: flex;
+            align-items: flex-end;
+            gap: 3px;
+            min-height: 170px;
+            padding: 0 14px;
+        }
+
+        .ty-gap { flex: 1; }
+        .ty-gap-s { width: 18px; }
+
+        .ty-book {
+            width: 34px;
+            border-radius: 3px 3px 1px 1px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            writing-mode: vertical-rl;
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: .12em;
+            text-transform: uppercase;
+            color: rgba(255, 255, 255, .92);
+            white-space: nowrap;
+            box-shadow: inset 3px 0 0 rgba(255, 255, 255, .12), inset -4px 0 6px rgba(0, 0, 0, .18);
+            /* subtle spine bands */
+            background-image:
+                linear-gradient(transparent 10px, rgba(255, 255, 255, .25) 10px, rgba(255, 255, 255, .25) 12px, transparent 12px),
+                linear-gradient(to top, transparent 10px, rgba(255, 255, 255, .25) 10px, rgba(255, 255, 255, .25) 12px, transparent 12px);
+            transition: translate .3s cubic-bezier(.2, .7, .3, 1), box-shadow .3s;
+            animation: ty-drop .6s cubic-bezier(.3, 1.4, .5, 1) backwards;
+            cursor: default;
+        }
+
+        .ty-book:hover {
+            translate: 0 -10px;
+            box-shadow: inset 3px 0 0 rgba(255, 255, 255, .12), inset -4px 0 6px rgba(0, 0, 0, .18), 0 8px 10px -6px rgba(0, 0, 0, .4);
+        }
+
+        .ty-w-s { width: 28px; }
+        .ty-w-l { width: 42px; font-size: 12px; }
+
+        .ty-c1 { background-color: #7f9a86; }
+        .ty-c2 { background-color: #7489a6; }
+        .ty-c3 { background-color: #b9765c; }
+        .ty-c4 { background-color: #c99f55; }
+        .ty-c5 { background-color: #84688c; }
+        .ty-c6 { background-color: #4c5463; }
+        .ty-c7 { background-color: #8b4b50; }
+        .ty-c8 { background-color: #e3dccd; color: #4c4740; }
+        .ty-c9 { background-color: #6d5fa3; }
+
+        .ty-lean { rotate: -9deg; transform-origin: bottom left; margin-left: 14px; }
+        .ty-lean-r { rotate: 7deg; transform-origin: bottom right; margin-right: 12px; }
+
+        /* staggered drop onto the shelf */
+        .ty-row > :nth-child(2) { animation-delay: .35s; }
+        .ty-row > :nth-child(3) { animation-delay: .42s; }
+        .ty-row > :nth-child(4) { animation-delay: .49s; }
+        .ty-row > :nth-child(5) { animation-delay: .56s; }
+        .ty-row > :nth-child(6) { animation-delay: .63s; }
+        .ty-row > :nth-child(7) { animation-delay: .70s; }
+        .ty-row > :nth-child(8) { animation-delay: .77s; }
+        .ty-row > :nth-child(9) { animation-delay: .84s; }
+        .ty-row > :nth-child(10) { animation-delay: .91s; }
+
+        /* flat stacked books */
+        .ty-stack { display: flex; flex-direction: column; align-items: flex-start; gap: 1px; }
+
+        .ty-flat {
+            height: 22px;
+            padding: 0 14px;
+            border-radius: 1px 3px 3px 1px;
+            display: flex;
+            align-items: center;
+            font-size: 10px;
+            font-weight: 600;
+            letter-spacing: .14em;
+            text-transform: uppercase;
+            color: rgba(255, 255, 255, .92);
+            box-shadow: inset 0 -3px 5px rgba(0, 0, 0, .15);
+            transition: translate .3s;
+        }
+
+        .ty-flat:hover { translate: 6px 0; }
+
+        /* bookend */
+        .ty-bookend {
+            width: 30px;
+            height: 80px;
+            position: relative;
+            flex-shrink: 0;
+        }
+
+        .ty-bookend::before,
+        .ty-bookend::after {
+            content: '';
+            position: absolute;
+            background: #3a3d44;
+            border-radius: 2px;
+        }
+
+        .ty-bookend::before { left: 0; bottom: 0; width: 7px; height: 100%; }
+        .ty-bookend::after { left: 0; bottom: 0; width: 100%; height: 5px; }
+        .ty-bookend.ty-flip { transform: scaleX(-1); }
+
+        /* framed gif */
+        .ty-frame {
+            padding: 6px;
+            background: #fff;
+            border: 5px solid #2f3137;
+            border-radius: 3px;
+            box-shadow: 0 6px 12px -4px rgba(0, 0, 0, .35);
+            rotate: -2deg;
+            transform-origin: bottom center;
+            line-height: 0;
+            margin: 0 8px;
+        }
+
+        .ty-frame img { width: 210px; height: auto; display: block; }
+
+        /* plant */
+        .ty-plant { position: relative; width: 56px; height: 90px; flex-shrink: 0; }
+
+        .ty-pot {
+            position: absolute;
+            bottom: 0;
+            left: 11px;
+            width: 34px;
+            height: 30px;
+            background: linear-gradient(90deg, #c27a5c, #a9624a);
+            clip-path: polygon(0 0, 100% 0, 85% 100%, 15% 100%);
+        }
+
+        .ty-leaves {
+            position: absolute;
+            bottom: 28px;
+            left: 28px;
+            animation: ty-sway 5s ease-in-out infinite;
+            transform-origin: bottom center;
+        }
+
+        .ty-leaf {
+            position: absolute;
+            bottom: 0;
+            left: -7px;
+            width: 14px;
+            height: 44px;
+            background: #6f9273;
+            border-radius: 50% 50% 50% 50% / 70% 70% 30% 30%;
+            transform-origin: bottom center;
+        }
+
+        .ty-leaf:nth-child(1) { rotate: -38deg; height: 36px; background: #82a685; }
+        .ty-leaf:nth-child(2) { rotate: 0deg; height: 52px; }
+        .ty-leaf:nth-child(3) { rotate: 34deg; height: 40px; background: #5d7f62; }
+
+        /* globe */
+        .ty-globe { position: relative; width: 60px; height: 92px; flex-shrink: 0; }
+
+        .ty-sphere {
+            position: absolute;
+            top: 0;
+            left: 6px;
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background:
+                radial-gradient(circle at 32% 28%, rgba(255, 255, 255, .55), transparent 40%),
+                radial-gradient(ellipse 14px 9px at 20% 45%, #8fae7d 98%, transparent),
+                radial-gradient(ellipse 10px 14px at 55% 60%, #8fae7d 98%, transparent),
+                radial-gradient(ellipse 12px 7px at 80% 30%, #8fae7d 98%, transparent),
+                #7fa4c4;
+            background-size: 100% 100%, 96px 48px, 96px 48px, 96px 48px, auto;
+            box-shadow: inset -6px -4px 10px rgba(0, 0, 0, .25);
+            animation: ty-spin 12s linear infinite;
+        }
+
+        .ty-globe::before {
+            content: '';
+            position: absolute;
+            top: 46px;
+            left: 28px;
+            width: 4px;
+            height: 38px;
+            background: #3a3d44;
+        }
+
+        .ty-globe::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 14px;
+            width: 32px;
+            height: 7px;
+            border-radius: 50% 50% 2px 2px;
+            background: #3a3d44;
+        }
+
+        /* note card */
+        .ty-note {
+            align-self: center;
+            margin-left: 10px;
+            padding: 12px 14px;
+            background: #fffdf6;
+            box-shadow: 0 4px 10px -3px rgba(0, 0, 0, .25);
+            font-family: Georgia, 'Book Antiqua', serif;
+            font-style: italic;
+            font-size: 13px;
+            color: #55525c;
+            rotate: 4deg;
+            position: relative;
+            transition: rotate .4s;
+        }
+
+        .ty-note:hover { rotate: 0deg; }
+
+        .ty-note::before {
+            content: '';
+            position: absolute;
+            top: -5px;
+            left: 50%;
+            width: 10px;
+            height: 10px;
+            margin-left: -5px;
+            border-radius: 50%;
+            background: #6d5fa3;
+            box-shadow: 0 2px 3px rgba(0, 0, 0, .3);
+        }
+
+        /* ---------- Reviews ---------- */
+        .ty-reviews {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(118px, 1fr));
+            gap: 22px 18px;
+        }
+
+        .ty-review { display: block; position: relative; }
+
+        .ty-review img {
+            width: 100%;
+            aspect-ratio: 2 / 3;
+            object-fit: cover;
+            border-radius: 6px;
+            display: block;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, .15);
+            transition: translate .35s cubic-bezier(.2, .7, .3, 1), box-shadow .35s;
+        }
+
+        .ty-review:hover img {
+            translate: 0 -6px;
+            box-shadow: 0 14px 22px -8px rgba(0, 0, 0, .4);
+        }
+
+        .ty-review span {
+            display: block;
+            margin-top: 8px;
+            font-size: 12.5px;
+            line-height: 1.35;
+            color: #4a4850;
+            transition: color .25s;
+        }
+
+        .ty-review:hover span { color: #6d5fa3; }
+
+        .ty-badge {
+            position: absolute;
+            top: 8px;
+            left: 8px;
+            padding: 2px 7px;
+            border-radius: 20px;
+            background: rgba(35, 34, 39, .78);
+            color: #fff;
+            font-size: 10px;
+            letter-spacing: .08em;
+            text-transform: uppercase;
+        }
+
+        /* ---------- Touzai ---------- */
+        .ty-touzai { display: flex; flex-direction: column; gap: 14px; }
+
+        .ty-touzai a {
+            width: 84%;
+            display: block;
+            line-height: 0;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, .15);
+            transition: translate .35s cubic-bezier(.2, .7, .3, 1), box-shadow .35s;
+        }
+
+        .ty-touzai a:nth-child(even) { align-self: flex-end; }
+        .ty-touzai a:nth-child(odd):hover { translate: 10px 0; }
+        .ty-touzai a:nth-child(even):hover { translate: -10px 0; }
+        .ty-touzai a:hover { box-shadow: 0 12px 24px -8px rgba(0, 0, 0, .4); }
+        .ty-touzai img { width: 100%; aspect-ratio: 10 / 3; object-fit: cover; }
+
+        /* ---------- Favorites ---------- */
+        .ty-favs { display: flex; flex-direction: column; gap: 18px; }
+
+        .ty-fav {
+            display: flex;
+            align-items: center;
+            gap: 24px;
+        }
+
+        .ty-fav:nth-child(even) { flex-direction: row-reverse; text-align: right; }
+
+        .ty-fav-img {
+            flex: 0 0 52%;
+            border-radius: 10px;
+            overflow: hidden;
+            line-height: 0;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, .15);
+        }
+
+        .ty-fav-img img {
+            width: 100%;
+            aspect-ratio: 9 / 5;
+            object-fit: cover;
+            transition: scale .6s cubic-bezier(.2, .7, .3, 1);
+        }
+
+        .ty-fav:hover .ty-fav-img img { scale: 1.05; }
+
+        .ty-fav-name {
+            font-family: Georgia, 'Book Antiqua', Palatino, serif;
+            font-size: 22px;
+            display: block;
+        }
+
+        .ty-fav-rank {
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 12px;
+            letter-spacing: .15em;
+            color: #6d5fa3;
+        }
+
+        /* ---------- Side characters ---------- */
+        .ty-chars {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+            gap: 10px;
+        }
+
+        .ty-char {
+            position: relative;
+            padding: 12px 16px;
+            border-radius: 8px;
+            background: #f4f3f1;
+            overflow: hidden;
+            transition: background .3s;
+        }
+
+        .ty-char::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 3px;
+            background: #6d5fa3;
+            scale: 1 0;
+            transition: scale .3s cubic-bezier(.2, .7, .3, 1);
+        }
+
+        .ty-char:hover { background: #efedf5; }
+        .ty-char:hover::before { scale: 1 1; }
+
+        .ty-char b {
+            display: block;
+            font-family: Georgia, 'Book Antiqua', Palatino, serif;
+            font-weight: normal;
+            font-size: 16px;
+        }
+
+        .ty-char span {
+            font-size: 11px;
+            letter-spacing: .06em;
+            text-transform: uppercase;
+            color: #8a8790;
+        }
+
+        /* ---------- Music ---------- */
+        .ty-eq { display: inline-flex; align-items: flex-end; gap: 2px; height: 16px; }
+
+        .ty-eq i {
+            width: 3px;
+            height: 100%;
+            background: #6d5fa3;
+            border-radius: 1px;
+            transform-origin: bottom;
+            animation: ty-eq 1.1s ease-in-out infinite alternate;
+        }
+
+        .ty-eq i:nth-child(2) { animation-delay: -.4s; animation-duration: .9s; }
+        .ty-eq i:nth-child(3) { animation-delay: -.7s; animation-duration: 1.3s; }
+        .ty-eq i:nth-child(4) { animation-delay: -.2s; animation-duration: 1s; }
+
+        .ty-music {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 24px;
+        }
+
+        .ty-music h3 {
+            margin: 0 0 10px;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 12px;
+            font-weight: normal;
+            letter-spacing: .15em;
+            text-transform: uppercase;
+            color: #6d5fa3;
+        }
+
+        .ty-music p { margin: 0 0 10px; font-size: 14px; line-height: 1.35; }
+        .ty-music small { display: block; font-size: 11.5px; color: #8a8790; }
+
+        .ty-footer {
+            text-align: right;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 12px;
+            letter-spacing: .1em;
+            color: #f4f4f4;
+        }
+
+        /* ---------- Animations ---------- */
+        @keyframes ty-rise {
+            from { opacity: 0; translate: 0 24px; }
+        }
+
+        @keyframes ty-drop {
+            from { opacity: 0; translate: 0 -28px; }
+        }
+
+        @keyframes ty-sway {
+            0%, 100% { rotate: -3deg; }
+            50% { rotate: 3deg; }
+        }
+
+        @keyframes ty-spin {
+            to { background-position: 0 0, 96px 0, 96px 0, 96px 0, 0 0; }
+        }
+
+        @keyframes ty-eq {
+            from { scale: 1 .25; }
+            to { scale: 1 1; }
+        }
+
+        @supports (animation-timeline: view()) {
+            .ty-card:nth-child(n+3) {
+                animation: ty-rise linear both;
+                animation-timeline: view();
+                animation-range: entry 0% entry 35%;
+            }
+        }
+
+        @media (max-width: 640px) {
+            .ty-card { padding: 22px 18px; }
+            .ty-name { font-size: 40px; }
+            .ty-fav, .ty-fav:nth-child(even) { flex-direction: column; text-align: left; align-items: stretch; }
+            .ty-touzai a { width: 100%; }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .ty-profile *, .ty-profile *::before, .ty-profile *::after {
+                animation: none !important;
+                transition: none !important;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="ty-profile">
+
+        <!-- Personal shelf -->
+        <section class="ty-card">
+            <div class="ty-hero-top">
+                <div>
+                    <div class="ty-eyebrow">Proxer-Redakteur</div>
+                    <h1 class="ty-name">Tyo</h1>
+                    <p class="ty-intro">Hello there! Redakteur im Proxer-Team, Worldbuilder und cursed Dual-Wielder of
+                        Deutsch &amp; English &hellip; <em>and obviously into Anime &amp; Manga.</em></p>
+                </div>
+            </div>
+
+            <div class="ty-wall">
+                <!-- Shelf 1: Proxer -->
+                <div class="ty-shelf">
+                    <div class="ty-row">
+                        <div class="ty-bookend"></div>
+                        <span class="ty-book ty-w-l ty-c9" style="height: 150px;">Rezensionen</span>
+                        <span class="ty-book ty-c6" style="height: 128px;">News</span>
+                        <span class="ty-book ty-c3" style="height: 140px;">Touzai</span>
+                        <span class="ty-book ty-w-s ty-c8 ty-lean-r" style="height: 136px;">Schreiberling</span>
+                        <div class="ty-gap"></div>
+                        <div class="ty-frame">
+                            <img src="https://cdn.proxer.me/f/AjEMdnK8" alt="typing..." width="500" height="210" />
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Shelf 2: Writing & Studies -->
+                <div class="ty-shelf">
+                    <div class="ty-row">
+                        <div class="ty-plant">
+                            <div class="ty-leaves">
+                                <span class="ty-leaf"></span>
+                                <span class="ty-leaf"></span>
+                                <span class="ty-leaf"></span>
+                            </div>
+                            <div class="ty-pot"></div>
+                        </div>
+                        <div class="ty-gap-s"></div>
+                        <span class="ty-book ty-w-l ty-c7" style="height: 158px;">Aspiring Novelist</span>
+                        <span class="ty-book ty-c1" style="height: 146px;">Worldbuilder</span>
+                        <span class="ty-book ty-c4" style="height: 132px;">Literature</span>
+                        <span class="ty-book ty-w-s ty-c2 ty-lean-r" style="height: 124px;">Informatik</span>
+                        <div class="ty-gap"></div>
+                        <div class="ty-stack">
+                            <span class="ty-flat ty-c5" style="width: 118px;">Deutsch</span>
+                            <span class="ty-flat ty-c8" style="width: 132px; margin-left: 6px;">English</span>
+                            <span class="ty-flat ty-c6" style="width: 140px;">Geographie 👀</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Shelf 3: Interests -->
+                <div class="ty-shelf">
+                    <div class="ty-row">
+                        <span class="ty-book ty-c2" style="height: 142px;">Sci-Fi</span>
+                        <span class="ty-book ty-c5" style="height: 150px;">Fantasy</span>
+                        <span class="ty-book ty-w-l ty-c3" style="height: 136px;">History</span>
+                        <span class="ty-book ty-w-s ty-c6" style="height: 118px;">PnP</span>
+                        <span class="ty-book ty-c1" style="height: 128px;">Movies</span>
+                        <span class="ty-book ty-c4 ty-lean" style="height: 122px;">Games</span>
+                        <div class="ty-gap"></div>
+                        <div class="ty-globe"><div class="ty-sphere"></div></div>
+                        <div class="ty-note">&hellip; and way more</div>
+                        <div class="ty-gap-s"></div>
+                        <div class="ty-bookend ty-flip"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Reviews -->
+        <section class="ty-card">
+            <div class="ty-head"><span class="ty-num">01</span><h2 class="ty-title">Rezensionen</h2></div>
+            <div class="ty-reviews">
+                <a href="review?id=519#top" class="ty-review"><img alt="Isekai Shokudou" src="https://cdn.proxer.me/cover/17794.jpg" /><span>Restaurant to Another World</span></a>
+                <a href="review?id=511#top" class="ty-review"><img alt="Bokutachi no Remake" src="https://cdn.proxer.me/cover/37432.jpg" /><span>Remake Our Life!</span></a>
+                <a href="review?id=503#top" class="ty-review"><img alt="Tenchi Souzou Design-bu" src="https://cdn.proxer.me/cover/38249.jpg" /><span>Heaven's Design Team</span></a>
+                <a href="review?id=493#top" class="ty-review"><img alt="Irozuku Sekai no Ashita kara" src="https://cdn.proxer.me/cover/22733.jpg" /><span>Iroduku: The World in Colors</span></a>
+                <a href="review?id=485#top" class="ty-review"><img alt="Bubble" src="https://cdn.proxer.me/cover/53200.jpg" /><span>Bubble</span></a>
+                <a href="review?id=476#top" class="ty-review"><img alt="Sword Art Online Progressive the Movie: Aria of a Starless Night" src="https://cdn.proxer.me/cover/41428.jpg" /><span>SAO Progressive: Aria of a Starless Night</span></a>
+                <a href="review?id=468#top" class="ty-review"><img alt="Mahoutsukai no Yome" src="https://cdn.proxer.me/cover/18841.jpg" /><span>The Ancient Magus' Bride</span></a>
+                <a href="review?id=458#top" class="ty-review"><img alt="The Summit of the Gods" src="https://cdn.proxer.me/cover/51593.jpg" /><span>Le Sommet des Dieux</span></a>
+                <a href="review?id=450#top" class="ty-review"><img alt="RikeKoi" src="https://cdn.proxer.me/cover/28342.jpg" /><span>Science Fell in Love, So I Tried to Prove It.</span></a>
+                <a href="review?id=442#top" class="ty-review"><img alt="Violet Evergarden the Movie" src="https://cdn.proxer.me/cover/24545.jpg" /><span>Violet Evergarden the Movie</span></a>
+                <a href="review?id=438#top" class="ty-review"><img alt="Hibike! Euphonium" src="https://cdn.proxer.me/cover/11155.jpg" /><span>Sound! Euphonium</span></a>
+                <a href="review?id=424#top" class="ty-review"><img alt="Runway de Waratte" src="https://cdn.proxer.me/cover/33511.jpg" /><span>Smile Down the Runway</span></a>
+                <a href="review?id=414#top" class="ty-review"><img alt="Majou no Tabitabi" src="https://cdn.proxer.me/cover/34195.jpg" /><span>The Journey of Elaina</span></a>
+                <a href="review?id=405#top" class="ty-review"><img alt="Hataraku Saibou!" src="https://cdn.proxer.me/cover/22471.jpg" /><span>Cells at Work!</span></a>
+                <a href="forum/18/388481" class="ty-review"><span class="ty-badge">MangaSnaps</span><img alt="Sword Art Online Progressive" src="https://cdn.proxer.me/cover/6511.jpg" /><span>#02 SAO Progressive</span></a>
+                <a href="forum/18/388400" class="ty-review"><span class="ty-badge">MangaSnaps</span><img alt="Yuukoku no Moriarty" src="https://cdn.proxer.me/cover/23063.jpg" /><span>#01 Moriarty the Patriot</span></a>
+                <a href="review?id=395#top" class="ty-review"><img alt="Honzuki no Gekokujou" src="https://cdn.proxer.me/cover/29706.jpg" /><span>Ascendance of a Bookworm</span></a>
+            </div>
+        </section>
+
+        <!-- Touzai -->
+        <section class="ty-card">
+            <div class="ty-head"><span class="ty-num">02</span><h2 class="ty-title">Touzai</h2></div>
+            <div class="ty-touzai">
+                <a href="touzai?id=390358"><img alt="Touzai" src="https://cdn.proxer.me/f/UWkr3grV" /></a>
+                <a href="touzai?id=390019"><img alt="Touzai" src="https://cdn.proxer.me/f/RJdlhRlV" /></a>
+                <a href="touzai?id=389815"><img alt="Touzai" src="https://cdn.proxer.me/f/9EDB8fc5" /></a>
+                <a href="touzai?id=389015"><img alt="Touzai" src="https://cdn.proxer.me/f/nE0Iywyb" /></a>
+            </div>
+        </section>
+
+        <!-- Favorites -->
+        <section class="ty-card">
+            <div class="ty-head"><span class="ty-num">03</span><h2 class="ty-title">All-Time Favorites</h2></div>
+            <div class="ty-favs">
+                <a href="info/17007#top" class="ty-fav">
+                    <div class="ty-fav-img"><img alt="Violet Evergarden" src="https://cdn.proxer.me/f/XnZx70n1" /></div>
+                    <div><span class="ty-fav-rank">N° 1</span><span class="ty-fav-name">Violet Evergarden</span></div>
+                </a>
+                <a href="info/11155#top" class="ty-fav">
+                    <div class="ty-fav-img"><img alt="Hibike! Euphonium" src="https://cdn.proxer.me/f/5XuOR7SZ" /></div>
+                    <div><span class="ty-fav-rank">N° 2</span><span class="ty-fav-name">Hibike! Euphonium</span></div>
+                </a>
+                <a href="info/9248#top" class="ty-fav">
+                    <div class="ty-fav-img"><img alt="Assassination Classroom" src="https://cdn.proxer.me/f/U8Nw6Cf8" /></div>
+                    <div><span class="ty-fav-rank">N° 3</span><span class="ty-fav-name">Assassination Classroom</span></div>
+                </a>
+                <a href="info/6640#top" class="ty-fav">
+                    <div class="ty-fav-img"><img alt="Log Horizon" src="https://cdn.proxer.me/f/AMJit6CU" /></div>
+                    <div><span class="ty-fav-rank">N° 4</span><span class="ty-fav-name">Log Horizon</span></div>
+                </a>
+                <a href="info/19588#top" class="ty-fav">
+                    <div class="ty-fav-img"><img alt="Classroom of the Elite" src="https://cdn.proxer.me/f/Rzb1DcNt" /></div>
+                    <div><span class="ty-fav-rank">N° 5</span><span class="ty-fav-name">Classroom of the Elite</span></div>
+                </a>
+            </div>
+        </section>
+
+        <!-- Side characters -->
+        <section class="ty-card">
+            <div class="ty-head"><span class="ty-num">04</span><h2 class="ty-title">Sidecharacter Hall of Appreciation</h2></div>
+            <div class="ty-chars">
+                <div class="ty-char"><b>Riza Hawkeye</b><span>Fullmetal Alchemist: Brotherhood</span></div>
+                <div class="ty-char"><b>Ai Hayasaka</b><span>Kaguya-sama: Love is War</span></div>
+                <div class="ty-char"><b>Balalaika</b><span>Black Lagoon</span></div>
+                <div class="ty-char"><b>Chiba Ryunosuke</b><span>Assassination Classroom</span></div>
+                <div class="ty-char"><b>Chain Sumeragi</b><span>Kekkai Sensen</span></div>
+                <div class="ty-char"><b>Yayoi Kunizuka</b><span>Psycho-Pass</span></div>
+                <div class="ty-char"><b>Cynthia Moore</b><span>Great Pretender</span></div>
+                <div class="ty-char"><b>Jibril</b><span>No Game No Life</span></div>
+                <div class="ty-char"><b>Akitaru Oubi</b><span>Fire Force</span></div>
+                <div class="ty-char"><b>Kazuma</b><span>Noragami</span></div>
+                <div class="ty-char"><b>Kuroko Shirai</b><span>A Certain Scientific Railgun</span></div>
+                <div class="ty-char"><b>Frederica Greenhill</b><span>Legend of the Galactic Heroes</span></div>
+                <div class="ty-char"><b>Ukyo Saionji</b><span>Dr. Stone</span></div>
+                <div class="ty-char"><b>Aoi Inuyama</b><span>Yuru Camp△</span></div>
+                <div class="ty-char"><b>CZ2128 Delta</b><span>Overlord</span></div>
+            </div>
+        </section>
+
+        <!-- Music -->
+        <section class="ty-card">
+            <div class="ty-head">
+                <span class="ty-eq"><i></i><i></i><i></i><i></i></span>
+                <h2 class="ty-title">The Best of Anime Music</h2>
+            </div>
+            <div class="ty-music">
+                <div>
+                    <h3>Soundtrack</h3>
+                    <p>Yuki Kajiura<small>Sword Art Online</small></p>
+                    <p>Yasuharu Takanashi<small>Log Horizon</small></p>
+                    <p>Evan Call<small>Violet Evergarden</small></p>
+                    <p>Joe Hisaishi<small>Spirited Away</small></p>
+                </div>
+                <div>
+                    <h3>Openings</h3>
+                    <p>YOASOBI – <em>Kaibutsu</em><small>Beastars S2</small></p>
+                    <p>Theatre Brook – <em>Uragiri no Yuuyake</em><small>Durarara!!</small></p>
+                    <p>KANA-BOON – <em>Torch of Liberty</em><small>Fire Force S2</small></p>
+                </div>
+                <div>
+                    <h3>Endings</h3>
+                    <p>ALI, AKLO – <em>LOST IN PARADISE</em><small>Jujutsu Kaisen</small></p>
+                    <p>TRUE – <em>Mirai no Hito e</em><small>Violet Evergarden the Movie</small></p>
+                    <p>Eri Sasaki – <em>Haru no Tonari</em><small>Yuru Camp△</small></p>
+                    <p>EGOIST – <em>Departures</em><small>Guilty Crown</small></p>
+                </div>
+                <div>
+                    <h3>Insert-Songs</h3>
+                    <p>Kessoku Band – <em>Guitar, Loneliness and Blue Planet</em><small>Bocchi the Rock!</small></p>
+                    <p>Kessoku Band – <em>That Band</em><small>Bocchi the Rock!</small></p>
+                    <p>Belle – <em>Gales of Song</em><small>Belle</small></p>
+                    <p>Ado – <em>Backlight</em><small>One Piece Film: Red</small></p>
+                </div>
+                <div>
+                    <h3>Interpreten</h3>
+                    <p>Kessoku Band</p>
+                    <p>YOASOBI</p>
+                    <p>Eve</p>
+                    <p>Ado</p>
+                    <p>ZUTOMAYO</p>
+                </div>
+            </div>
+        </section>
+
+        <div class="ty-footer">Stand: November 2026</div>
+    </div>
+</body>
+
+</html>
