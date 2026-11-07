@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import { useYMap } from '../composables/useY'
 import { t } from '../i18n'
+import { touchScreen } from '../state/device'
 import { session } from '../state/session'
 import { usePlanner } from './context'
 import ObjectInspector from './ObjectInspector.vue'
@@ -19,7 +20,13 @@ const object = computed(() => (session.selectedObject ? objects.value.get(sessio
     <ProvincePanel v-else-if="session.selectedProvince !== null" :id="session.selectedProvince" />
     <div v-else class="empty-state">
       <p>{{ t('inspector.empty') }}</p>
-      <ul class="quick-tips">
+      <ul v-if="touchScreen" class="quick-tips">
+        <li>{{ t('tips.touch.tools') }}</li>
+        <li>{{ t('tips.touch.select') }}</li>
+        <li>{{ t('tips.touch.pan') }}</li>
+        <li>{{ t('tips.touch.ping') }}</li>
+      </ul>
+      <ul v-else class="quick-tips">
         <li><kbd>P</kbd> {{ t('tips.assign') }} · <kbd>C</kbd> {{ t('tips.own') }}</li>
         <li><kbd>A</kbd> {{ t('tips.arrow') }} · <kbd>F</kbd> {{ t('tips.front') }}</li>
         <li><kbd>U</kbd> {{ t('tips.unit') }} · <kbd>O</kbd> {{ t('tips.objective') }}</li>

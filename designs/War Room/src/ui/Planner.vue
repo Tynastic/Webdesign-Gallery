@@ -12,7 +12,8 @@ import type { MapData } from '../map/types'
 import { toast } from '../state/feedback'
 import { loadPlayer, savePlayer, session, stepPhase, takeLegacyNation, type ToolId } from '../state/session'
 import type { PlanHandle } from '../sync/planDoc'
-import { CloudOff, Eye, Info, X } from 'lucide-vue-next'
+import { ChevronUp, CloudOff, Eye, Info, X } from 'lucide-vue-next'
+import { narrowScreen } from '../state/device'
 import ConfirmDialog from './ConfirmDialog.vue'
 import { providePlanner } from './context'
 import HelpDialog from './HelpDialog.vue'
@@ -172,6 +173,43 @@ const offPing = presence.onPing((p) => {
 })
 onBeforeUnmount(offPing)
 
+// ---------- phones: the panels live in a bottom sheet under the map ----------
+// Peek shows only its bar (with the status hint), half splits the screen with the map, full leaves a strip of map.
+type SheetState = 'peek' | 'half' | 'full'
+const SHEET_STATES: SheetState[] = ['peek', 'half', 'full']
+const sheet = ref<SheetState>('peek')
+let swipeFrom: number | null = null
+/** A tap opens the sheet halfway, or closes it to the bar. */
+const toggleSheet = () => (sheet.value = sheet.value === 'half' ? 'peek' : 'half')
+function sheetDown(e: PointerEvent) {
+  swipeFrom = e.clientY
+  ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
+}
+/**
+ * Taps and swipes are both read from the pointer (browsers drop the click of a tap that
+ * follows a swipe too closely). A swipe moves the sheet one step up or down.
+ */
+function sheetUp(e: PointerEvent) {
+  if (swipeFrom === null) return
+  const dy = e.clientY - swipeFrom
+  swipeFrom = null
+  if (Math.abs(dy) < 30) return toggleSheet()
+  const i = SHEET_STATES.indexOf(sheet.value) + (dy < 0 ? 1 : -1)
+  sheet.value = SHEET_STATES[Math.max(0, Math.min(SHEET_STATES.length - 1, i))]
+}
+/** Keyboard (Enter / Space) only; pointer taps are handled in sheetUp. */
+function sheetKey(e: MouseEvent) {
+  if (e.detail === 0) toggleSheet()
+}
+// Tapping something to look at it (select tool) brings up its details. Drawing tools select what they
+// just made, but popping the panels up then would cover the map in the middle of drawing.
+watch(
+  () => [session.selectedProvince, session.selectedObject],
+  ([province, object]) => {
+    if (narrowScreen.value && session.tool === 'select' && (province !== null || object !== null) && sheet.value === 'peek') sheet.value = 'half'
+  },
+)
+
 // ---------- follow another player's view ----------
 const followedName = ref('')
 let lastView = ''
@@ -270,7 +308,7 @@ const meName = () => {
 </script>
 
 <template>
-  <div class="shell">
+  <div class="shell" :class="`sheet-${sheet}`">
     <TopBar :me-name="meName()" @help="helpOpen = true" @identity="joinOpen = true" @lineup="session.lineupOpen = true" />
     <Toolbar />
 
@@ -311,7 +349,25 @@ const meName = () => {
     </main>
 
     <aside class="sidebar" :aria-label="t('planner.panels')">
-      <component :is="p.component" v-for="p in sidePanels" :key="p.id" />
+      <!-- Phones only: the sheet's bar. Tap or swipe it; it carries the status hint the map has no room for.
+           touchend is cancelled so the tap's late click can't land on the map once the bar has moved. -->
+      <button
+        class="sheet-handle"
+        :aria-expanded="sheet !== 'peek'"
+        :aria-label="`${sheet === 'peek' ? t('sheet.expand') : t('sheet.collapse')}: ${tm(session.hint) || t('status.ready')}`"
+        @pointerdown="sheetDown"
+        @pointerup="sheetUp"
+        @pointercancel="swipeFrom = null"
+        @touchend.prevent
+        @click="sheetKey"
+      >
+        <span class="sheet-grip" aria-hidden="true" />
+        <span class="sheet-hint" aria-hidden="true">{{ tm(session.hint) || t('status.ready') }}</span>
+        <ChevronUp :size="18" class="sheet-chev" aria-hidden="true" />
+      </button>
+      <div class="sheet-body">
+        <component :is="p.component" v-for="p in sidePanels" :key="p.id" />
+      </div>
     </aside>
 
     <HelpDialog v-model:open="helpOpen" />

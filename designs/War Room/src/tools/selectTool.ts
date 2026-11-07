@@ -2,6 +2,7 @@ import L from 'leaflet'
 import { updateObject, type PlanObject, type Point } from '../../shared/schema'
 import { t } from '../i18n'
 import { canonicalPoints, nearestCopy, toLatLng } from '../map/coords'
+import { touchScreen } from '../state/device'
 import type { Tool, ToolContext } from './types'
 
 const PATH_TYPES = new Set(['arrow', 'front', 'zone'])
@@ -132,7 +133,8 @@ export class SelectTool implements Tool {
       pane: 'handles',
       keyboard: false,
       title,
-      icon: L.divIcon({ className: `edit-handle ${kind}`, iconSize: kind === 'vertex' ? [12, 12] : [10, 10] }),
+      // Fingertip-sized on touch screens.
+      icon: L.divIcon({ className: `edit-handle ${kind}`, iconSize: kind === 'vertex' ? (touchScreen.value ? [24, 24] : [12, 12]) : touchScreen.value ? [18, 18] : [10, 10] }),
     })
     this.ctx.preview.addLayer(m)
     return m

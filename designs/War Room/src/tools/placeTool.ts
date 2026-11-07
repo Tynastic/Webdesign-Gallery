@@ -7,7 +7,6 @@ import type { Tool, ToolContext } from './types'
 
 type PlaceType = 'unit' | 'objective' | 'text'
 
-
 /** One click places a marker; the new marker is selected so it can be labelled right away. */
 export class PlaceTool implements Tool {
   readonly cursor = 'copy'
@@ -63,11 +62,13 @@ export class RangeTool implements Tool {
 
   activate() {
     this.center = null
+    this.ctx.session.draft = null
     this.ctx.setHint('hint.range.center')
   }
 
   deactivate() {
     this.center = null
+    this.ctx.session.draft = null
     this.ctx.preview.clearLayers()
   }
 
@@ -94,6 +95,7 @@ export class RangeTool implements Tool {
     const p = this.near(e)
     if (!this.center) {
       this.center = p
+      this.ctx.session.draft = { canFinish: false, canUndo: false }
       this.ctx.setHint('hint.range.radius')
       return
     }
@@ -104,15 +106,21 @@ export class RangeTool implements Tool {
     this.ctx.checkpoint()
     this.ctx.session.selectedObject = id
     this.center = null
+    this.ctx.session.draft = null
     this.ctx.preview.clearLayers()
     this.ctx.setHint('hint.range.added')
   }
 
   onKey(e: KeyboardEvent) {
     if (e.key !== 'Escape' || !this.center) return false
+    this.command()
+    return true
+  }
+
+  /** The only command while choosing the radius: cancel the circle. */
+  command() {
     this.activate()
     this.ctx.preview.clearLayers()
-    return true
   }
 
   private draft(radius: number) {

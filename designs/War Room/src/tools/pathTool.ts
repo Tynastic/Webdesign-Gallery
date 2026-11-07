@@ -2,16 +2,19 @@ import type L from 'leaflet'
 import { addObject, type PlanObject, type Point } from '../../shared/schema'
 import { canonicalPoints, nearestCopy } from '../map/coords'
 import { buildLayers } from '../render/objectRenderer'
+import type { DraftCommand } from '../state/session'
 import type { Tool, ToolContext } from './types'
 
 type PathType = 'arrow' | 'front' | 'zone'
 
 const MIN_POINTS: Record<PathType, number> = { arrow: 2, front: 2, zone: 3 }
+/** Keyboard shortcuts for the draft buttons. */
+export const KEY_COMMANDS: Record<string, DraftCommand | undefined> = { Enter: 'finish', Backspace: 'undo', Escape: 'cancel' }
 
 /**
  * Click-to-place drawing for arrows, fronts and zones. Shows a live, exact
- * preview of the final shape; double-click or Enter finishes, Backspace removes
- * the last point, Esc cancels. Dragging still pans the map.
+ * preview of the final shape; double-click, Enter or Done finishes, Backspace or
+ * Undo point removes the last point, Esc or Cancel cancels. Dragging still pans the map.
  */
 export class PathTool implements Tool {
   readonly cursor = 'crosshair'
@@ -29,6 +32,7 @@ export class PathTool implements Tool {
   deactivate() {
     this.ctx.map.doubleClickZoom.enable()
     this.points = []
+    this.ctx.session.draft = null
     this.ctx.preview.clearLayers()
   }
 
@@ -67,14 +71,19 @@ export class PathTool implements Tool {
   }
 
   onKey(e: KeyboardEvent): boolean {
-    if (!this.points.length) return false
-    if (e.key === 'Enter') this.finish()
-    else if (e.key === 'Escape') this.reset()
-    else if (e.key === 'Backspace') {
+    const c = KEY_COMMANDS[e.key]
+    if (!this.points.length || !c) return false
+    this.command(c)
+    return true
+  }
+
+  command(c: DraftCommand) {
+    if (c === 'finish') this.finish()
+    else if (c === 'cancel') this.reset()
+    else {
       this.points.pop()
       this.update()
-    } else return false
-    return true
+    }
   }
 
   private finish() {
@@ -94,6 +103,7 @@ export class PathTool implements Tool {
 
   private reset() {
     this.points = []
+    this.ctx.session.draft = null
     this.ctx.preview.clearLayers()
     this.ctx.setHint(`hint.${this.id}.start` as const)
   }
@@ -102,6 +112,7 @@ export class PathTool implements Tool {
     const n = this.points.length
     const need = MIN_POINTS[this.id]
     if (n === 0) return this.reset()
+    this.ctx.session.draft = { canFinish: n >= need, canUndo: true }
     if (n < need) this.ctx.setHint('hint.path.more', { n: n + 1 })
     else this.ctx.setHint('hint.path.finish', { n })
     this.renderPreview()

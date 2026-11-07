@@ -2,15 +2,19 @@
 import { ChevronDown } from 'lucide-vue-next'
 import { ref } from 'vue'
 
-/** Collapsible sidebar section; open state is remembered per section. */
-const props = withDefaults(defineProps<{ title: string; id: string; badge?: string | number; collapsible?: boolean }>(), { collapsible: true })
+/** Collapsible sidebar section; open state is remembered per section once toggled, else `defaultOpen`. */
+const props = withDefaults(defineProps<{ title: string; id: string; badge?: string | number; collapsible?: boolean; defaultOpen?: boolean }>(), {
+  collapsible: true,
+  defaultOpen: true,
+})
 
 const KEY = `cow-planner.panel.${props.id}`
 const read = () => {
   try {
-    return localStorage.getItem(KEY) !== 'closed'
+    const stored = localStorage.getItem(KEY)
+    return stored === null ? props.defaultOpen : stored !== 'closed'
   } catch {
-    return true
+    return props.defaultOpen
   }
 }
 const open = ref(read())

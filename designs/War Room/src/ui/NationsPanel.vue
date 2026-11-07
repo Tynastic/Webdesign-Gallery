@@ -37,12 +37,15 @@ const progress = computed(() => {
   return out
 })
 
-const collapsed = ref(new Set<Team | null>())
+/**
+ * Groups the viewer folded or unfolded. Untouched, the nations without a team start folded once
+ * some nation has a team: they are then mostly AI nations, and the teams are what matters.
+ */
+const toggled = ref(new Map<Team | null, boolean>())
+const teamsInUse = computed(() => TEAMS.some((team) => byTeam.value.get(team)!.length > 0))
+const isCollapsed = (team: Team | null) => toggled.value.get(team) ?? (team === null && teamsInUse.value)
 function toggle(team: Team | null) {
-  const next = new Set(collapsed.value)
-  if (next.has(team)) next.delete(team)
-  else next.add(team)
-  collapsed.value = next
+  toggled.value = new Map(toggled.value).set(team, !isCollapsed(team))
 }
 
 const groups = computed(() =>
@@ -79,13 +82,13 @@ const signed = (n: number) => (n > 0 ? `+${n}` : String(n))
     <button class="btn lineup-open" :title="t('nations.lineupTitle')" @click="session.lineupOpen = true"><Users :size="14" />{{ t('nations.lineup') }}<kbd>L</kbd></button>
     <p v-if="!playersTotal" class="empty-state">{{ t('nations.empty') }}</p>
     <div v-for="g in groups" :key="g.team ?? 'none'" class="nation-group" :class="`team-${g.team ?? 'none'}`">
-      <button class="nation-group-head" :aria-expanded="!collapsed.has(g.team)" @click="toggle(g.team)">
+      <button class="nation-group-head" :aria-expanded="!isCollapsed(g.team)" @click="toggle(g.team)">
         <ChevronRight :size="14" class="chev" />
         <span class="team-swatch" :style="{ background: g.team ? TEAM_SWATCH[g.team] : TEAM_SWATCH.open }" />
         <strong>{{ teamLabel(g.team) }}</strong>
         <span class="muted">{{ t('nations.groupCount', { n: g.players, of: g.rows.length }) }}</span>
       </button>
-      <ul v-if="!collapsed.has(g.team)" class="rows" @mouseleave="planner?.focusNation(null)">
+      <ul v-if="!isCollapsed(g.team)" class="rows" @mouseleave="planner?.focusNation(null)">
         <li v-for="n in g.rows" :key="n.nation" class="row nation-row" :class="{ ai: !n.player }" @mouseenter="planner?.focusNation(n.nation)">
           <span class="dot lg" :style="{ background: n.color }" :title="t('nations.colourTitle')" />
           <div class="nation-cell">

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Eraser, RotateCcw } from 'lucide-vue-next'
+import { Check, Eraser, RotateCcw, Undo2, X } from 'lucide-vue-next'
 import { computed, ref } from 'vue'
 import { distanceFactor, setDistanceFactor, type ArrowVariant, type FrontVariant, type ZoneVariant } from '../../shared/schema'
 import { useMatch } from '../composables/useMatch'
@@ -9,7 +9,7 @@ import { t } from '../i18n'
 import { fmtNum, fmtPoints } from '../i18n/format'
 import { toast } from '../state/feedback'
 import { OBJECTIVE_ICONS, UNIT_TYPES, objectiveLabel, objectiveSvg, unitLabel, unitSvg } from '../render/icons'
-import { session, type PlanMode } from '../state/session'
+import { session, type PaintArea, type PlanMode } from '../state/session'
 import ColorChooser from './ColorChooser.vue'
 import { usePlanner } from './context'
 import NationSelect from './NationSelect.vue'
@@ -17,7 +17,7 @@ import PickerMenu from './PickerMenu.vue'
 import Segmented from './Segmented.vue'
 import { toolLabel } from './toolCatalog'
 
-const { plan, undo } = usePlanner()
+const { plan, undo, planner } = usePlanner()
 const { playerNations, label, myRole } = useMatch()
 const layers = useYMap(plan.layers)
 const phases = useYArray(plan.phases)
@@ -95,6 +95,13 @@ const planModes = computed<{ value: PlanMode; label: string }[]>(() => [
   { value: 'taken', label: t('options.modeTaken') },
 ])
 
+/** One province per click, or the whole territory (in "Mark taken" mode: the nation's whole day). */
+const areas = computed<{ value: PaintArea; label: string }[]>(() => [
+  { value: 'one', label: t('options.areaOne') },
+  { value: 'all', label: taking.value ? t('options.areaDay') : t('options.areaTerritory') },
+])
+const taking = computed(() => session.tool === 'assign' && session.planMode === 'taken')
+
 const arrows = computed<{ value: ArrowVariant; label: string }[]>(() => [
   { value: 'attack', label: t('variant.attack') },
   { value: 'move', label: t('variant.move') },
@@ -117,6 +124,7 @@ const iconColor = computed(() => session.drawColor ?? myRole.value?.color ?? '#f
 
     <template v-if="session.tool === 'assign' || session.tool === 'own'">
       <Segmented v-if="session.tool === 'assign'" v-model="session.planMode" :options="planModes" :label="t('options.planMode')" :title="t('options.planModeTitle')" />
+      <Segmented v-model="session.paintArea" :options="areas" :label="t('options.area')" :title="taking ? t('options.areaTitleTaken') : t('options.areaTitle')" />
       <div v-if="session.tool === 'own' || session.planMode === 'plan'" class="player-pick" role="radiogroup" :aria-label="session.tool === 'assign' ? t('options.planFor') : t('options.conqueredBy')">
         <template v-for="(n, i) in rosterList" :key="n.id">
         <span v-if="n.newTeam" class="pick-sep" aria-hidden="true" />
@@ -226,6 +234,16 @@ const iconColor = computed(() => session.drawColor ?? myRole.value?.color ?? '#f
         <span v-if="factor !== 1" class="to-target">{{ t('options.calibrated', { factor: factor.toLocaleString() }) }}</span>
         <button v-if="factor !== 1" class="btn" @click="resetCalibration">{{ t('options.calibrationReset') }}</button>
       </template>
+    </template>
+
+    <!-- A drawing or measurement in progress: what Enter, Backspace and Esc do, for touch screens. -->
+    <template v-if="session.draft">
+      <span class="to-sep" />
+      <template v-if="session.draft.canUndo && session.tool !== 'range'">
+        <button class="btn" :title="t('options.draftUndoTitle')" @click="planner?.command('undo')"><Undo2 :size="15" />{{ t('options.draftUndo') }}</button>
+        <button class="btn primary" :disabled="!session.draft.canFinish" :title="t('options.draftFinishTitle')" @click="planner?.command('finish')"><Check :size="15" />{{ t('options.draftFinish') }}</button>
+      </template>
+      <button class="btn" :title="t('options.draftCancelTitle')" @click="planner?.command('cancel')"><X :size="15" />{{ t('common.cancel') }}</button>
     </template>
 
     <template v-if="drawing">

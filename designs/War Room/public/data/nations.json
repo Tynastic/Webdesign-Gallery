@@ -23,7 +23,7 @@
     "name": "United Kingdom",
     "short": "UK",
     "provinces": 270,
-    "de": "Vereinigtes Königreich",
+    "de": "Groß-Britannien",
     "capital": "London"
   },
   "rgb(102,126,134)": {
@@ -104,10 +104,10 @@
     "de": "Irland"
   },
   "rgb(113,170,149)": {
-    "name": "Danzig",
+    "name": "Free City of Danzig",
     "short": "DAN",
     "provinces": 3,
-    "de": "Danzig"
+    "de": "Freie Stadt Danzig"
   },
   "rgb(202,151,39)": {
     "name": "Denmark",
@@ -171,7 +171,7 @@
     "name": "United States",
     "short": "USA",
     "provinces": 260,
-    "de": "Vereinigte Staaten",
+    "de": "USA",
     "capital": "Washington D.C."
   },
   "rgb(194,78,80)": {
@@ -221,10 +221,10 @@
     "capital": "Cairo"
   },
   "rgb(166,151,83)": {
-    "name": "Thailand",
+    "name": "Siam",
     "short": "THA",
     "provinces": 14,
-    "de": "Thailand"
+    "de": "Siam"
   },
   "rgb(114,157,182)": {
     "name": "Australia",
@@ -234,10 +234,10 @@
     "capital": "Canberra"
   },
   "rgb(137,159,134)": {
-    "name": "Sinkiang",
+    "name": "Xinjiang",
     "short": "SIN",
     "provinces": 31,
-    "de": "Sinkiang",
+    "de": "Xingjang",
     "capital": "Urumchi"
   },
   "rgb(186,154,80)": {
@@ -254,10 +254,10 @@
     "de": "Afghanistan"
   },
   "rgb(103,156,140)": {
-    "name": "Iran",
+    "name": "Persia",
     "short": "IRN",
     "provinces": 40,
-    "de": "Iran",
+    "de": "Persien",
     "capital": "Tehran"
   },
   "rgb(196,101,87)": {
@@ -282,10 +282,10 @@
     "capital": "Lima"
   },
   "rgb(100,147,103)": {
-    "name": "China",
+    "name": "Nationalist China",
     "short": "CHN",
     "provinces": 107,
-    "de": "China",
+    "de": "Nationalchina",
     "capital": "Chongqing"
   },
   "rgb(208,199,136)": {
@@ -437,10 +437,10 @@
     "de": "Nepal"
   },
   "rgb(145,135,82)": {
-    "name": "Ma Clique",
+    "name": "Communist China",
     "short": "MAC",
     "provinces": 7,
-    "de": "Ma-Clique"
+    "de": "Kommunistisches China"
   },
   "rgb(126,137,125)": {
     "name": "Mongolia",

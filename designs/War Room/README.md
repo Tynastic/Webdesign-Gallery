@@ -43,9 +43,9 @@ More: `?` shows all shortcuts. Click a teammate's avatar to follow their view. E
 
 | Class | Nations | Province | City |
 |---|---|---|---|
-| 1 (large) | USA, Soviet Union, China, Brazil | 1 | 4 |
+| 1 (large) | USA, Soviet Union, Nationalist China, Brazil | 1 | 4 |
 | 2 (medium) | Canada, UK, France, Germany, Italy, Spain, India, Japan, Australia | 2 | 5 |
-| 3 (small) | Mexico, Venezuela, Peru, Argentina, South Africa, Egypt, Sweden, Netherlands, Poland, Yugoslavia, Romania, Turkey, Iran, Sinkiang, Tibet, Mongolia, Manchukuo | 3 | 6 |
+| 3 (small) | Mexico, Venezuela, Peru, Argentina, South Africa, Egypt, Sweden, Netherlands, Poland, Yugoslavia, Romania, Turkey, Persia, Xinjiang, Tibet, Mongolia, Manchukuo | 3 | 6 |
 
 - Doppelstädte count as cities.
 - **Half price:** land that is not the holder's core land, and taking back your own or a teammate's core land.

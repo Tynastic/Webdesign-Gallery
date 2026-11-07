@@ -203,20 +203,20 @@ Ideas that were dropped: room chat (not needed) and Leaflet-Geoman (custom tools
 
 **Already in place**, so phones won't need a rewrite:
 
-- **Pointer events.** Tool drags track `pointermove`/`pointerup` at document level, so touch and pen work like a mouse.
-- **Taps are clicks.** Leaflet turns taps into clicks, and `tapHold` makes a long press fire `contextmenu`.
-- **No hover-only information.** The province panel shows everything the hover tooltip does.
-- **Touch targets.** 44 px controls in the lobby, password gate and identity dialog, and native `<select>` pickers.
-- **Responsive shell.** Below 720 px the toolbar becomes a horizontal strip and the sidebar moves under the map.
+- **Pointer events.** Tool drags track `pointermove`/`pointerup` at document level, following only the finger that started them.
+- **Touch starts drags.** Browsers send a finger's `mousedown` only after it lifts, so `adaptTouch` in [createMap.ts](src/map/createMap.ts) sends Leaflet one on `touchstart` (after Leaflet's touch panning has claimed the gesture) and drops the browser's late one. The map keeps `touch-action: none`, so the browser never takes over a paint stroke.
+- **Two fingers pinch.** A second finger during a tool drag cancels and undoes it; Leaflet's pinch then zooms and pans. This replaces "hold Space" on touch screens.
+- **Taps are clicks.** Long-press pings in the select tool (instead of Alt+click); the paint tools ignore it.
+- **Buttons for keys.** Drawings in progress get Done, Undo point and Cancel in the options bar (Enter, Backspace, Esc); the paint tools get a Province / Territory switch (Shift+click).
+- **No hover-only information.** The province panel shows everything the hover tooltip does; touch screens get no tooltip.
+- **Bottom sheet.** Below 720 px the panels sit in a sheet under the map ([Planner.vue](src/ui/Planner.vue)): just its bar with the status hint, half the screen, or nearly all of it. Tap the bar to open or close it, swipe it up or down a step; selecting something in the select tool opens it halfway. The map row takes the rest, and `PlannerMap` follows its size with a `ResizeObserver`.
+- **Touch wording.** On `(hover: none) and (pointer: coarse)` ([device.ts](src/state/device.ts)), `t()` prefers a `<key>.touch` message when one exists, so hints, tool help and tips say tap, long-press and two fingers. Key badges are hidden, and the help dialog lists gestures instead of shortcuts.
+- **Touch targets.** 44 px controls in the lobby, password gate, identity dialog and map chrome, 40 px icon buttons, 24 px edit handles, and native `<select>` pickers. Fields use 16 px text so iOS doesn't zoom into them.
+- **Phone viewport.** `100dvh` and `viewport-fit=cover` with safe-area padding.
 
 **Still to build:**
 
-1. **Bottom sheet** instead of the stacked sidebar: a peek height with the selection summary, drag up for panels, swipe down to close.
-2. **Gestures:**
-   - long-press to ping in the select tool and to erase or restore in the paint tools;
-   - two-finger pan and zoom while painting, replacing "hold Space";
-   - a "Done" button for path tools, because double-tap is unreliable and zooms.
-3. **Bigger edit handles** on coarse pointers (`@media (pointer: coarse)`): 24 px vertex handles and a larger hit tolerance for thin lines.
-4. **Thumb-reach tool palette** at the bottom edge, with the options bar as a second row above it.
-5. **Performance:** lower canvas padding and devicePixelRatio caps on low-end devices, no province borders below a zoom threshold, and fewer label redraws during pinch.
-6. **PWA:** a manifest and a service worker that caches the app and map data. Rooms already cache in IndexedDB.
+1. **Thumb-reach tool palette** at the bottom edge, with the options bar as a second row above it (if players ask for it; the top strip fits 390 px).
+2. **Initial view on tall screens:** start zoomed to the height of the world instead of its width, so a portrait phone shows no empty band above and below.
+3. **Performance:** lower canvas padding and devicePixelRatio caps on low-end devices, no province borders below a zoom threshold, and fewer label redraws during pinch.
+4. **PWA:** a manifest and a service worker that caches the app and map data. Rooms already cache in IndexedDB.

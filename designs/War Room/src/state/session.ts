@@ -11,6 +11,17 @@ export type ToolId = 'select' | 'assign' | 'own' | 'arrow' | 'front' | 'zone' | 
 export type FillMode = 'teams' | 'vivid' | 'muted' | 'off'
 /** What the plan tool does on click: plan conquests, or mark planned ones as taken. */
 export type PlanMode = 'plan' | 'taken'
+/** What one click of a paint tool covers: one province, or the whole territory (the same as Shift+click). */
+export type PaintArea = 'one' | 'all'
+/** Buttons for a drawing in progress (touch screens have no Enter, Backspace or Esc). */
+export type DraftCommand = 'finish' | 'undo' | 'cancel'
+
+/** A drawing or measurement in progress, as the options bar offers it; cancelling is always possible. */
+export interface Draft {
+  canFinish: boolean
+  /** Removing the last point is possible. */
+  canUndo: boolean
+}
 
 export interface SessionState {
   tool: ToolId
@@ -30,6 +41,7 @@ export interface SessionState {
   /** Nation new planned conquests go to; null = erase. */
   assignNation: string | null
   planMode: PlanMode
+  paintArea: PaintArea
   /** Nation the ownership tool marks provinces as conquered by; null = restore the original owner. */
   ownNation: string | null
   activeLayer: string
@@ -65,6 +77,8 @@ export interface SessionState {
   hint: Message | null
   /** Transient: the map is fully zoomed out ('min') or in ('max'). */
   zoomRange: 'min' | 'max' | null
+  /** Transient: the drawing or measurement in progress, if any. */
+  draft: Draft | null
 }
 
 const STORAGE_KEY = 'cow-planner.session'
@@ -97,6 +111,7 @@ export const session = reactive<SessionState>({
   objectiveIcon: 'target',
   assignNation: null,
   planMode: 'plan',
+  paintArea: 'one',
   ownNation: null,
   activeLayer: 'general',
   activePhase: null,
@@ -119,6 +134,7 @@ export const session = reactive<SessionState>({
   hoveredProvince: null,
   hint: null,
   zoomRange: null,
+  draft: null,
   ...restore(),
 })
 

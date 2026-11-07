@@ -4,10 +4,12 @@ import { locale } from '../i18n'
 import { toLatLng } from '../map/coords'
 import { formatDuration, formatKm, pathKm } from '../map/geo'
 import { nearestCopy } from '../map/wrap'
+import type { DraftCommand } from '../state/session'
+import { KEY_COMMANDS } from './pathTool'
 import type { Tool, ToolContext } from './types'
 
 /**
- * Ruler: click points, double-click/Enter to finish. Shows the approximate
+ * Ruler: click points, double-click, Enter or Done to finish. Shows the approximate
  * distance (calibrated per plan) and, with a speed set, the travel time. The
  * measurement is personal and temporary; it is never stored in the plan.
  */
@@ -39,6 +41,7 @@ export class MeasureTool implements Tool {
     this.points.push(p)
     this.ctx.setHint('hint.measure.more')
     this.render()
+    this.syncDraft()
   }
 
   onDblClick() {
@@ -52,14 +55,26 @@ export class MeasureTool implements Tool {
   }
 
   onKey(e: KeyboardEvent): boolean {
-    if (!this.points.length) return false
-    if (e.key === 'Enter') this.finish()
-    else if (e.key === 'Escape') this.clear()
-    else if (e.key === 'Backspace' && !this.done) {
-      this.points.pop()
-      this.render()
-    } else return false
+    const c = KEY_COMMANDS[e.key]
+    if (!this.points.length || !c || (c === 'undo' && this.done)) return false
+    this.command(c)
     return true
+  }
+
+  command(c: DraftCommand) {
+    if (c === 'finish') this.finish()
+    else if (c === 'cancel') this.clear()
+    else if (!this.done) {
+      this.points.pop()
+      if (!this.points.length) return this.clear()
+      this.render()
+      this.syncDraft()
+    }
+  }
+
+  /** What the options bar offers: Done from 2 points; a finished measurement can only be cleared. */
+  private syncDraft() {
+    this.ctx.session.draft = this.points.length ? { canFinish: !this.done && this.points.length >= 2, canUndo: !this.done } : null
   }
 
   /** View moved to another world copy, calibration or language changed: redraw. */
@@ -78,6 +93,7 @@ export class MeasureTool implements Tool {
     this.ctx.session.measuredKm = pathKm(this.points) // uncalibrated, for calibration
     this.ctx.setHint('hint.measure.done', { km: this.label(this.points) })
     this.render()
+    this.syncDraft()
   }
 
   private clear() {
@@ -85,6 +101,7 @@ export class MeasureTool implements Tool {
     this.cursorPt = null
     this.done = false
     this.ctx.session.measuredKm = null
+    this.ctx.session.draft = null
     this.ctx.preview.clearLayers()
     this.ctx.setHint('hint.measure.start')
   }

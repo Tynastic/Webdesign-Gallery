@@ -65,7 +65,7 @@ test('point counter follows the selected days; planned provinces can be marked a
 
   // The plan tool puts the Points panel on top and drops the Layers panel.
   await page.keyboard.press('p')
-  await expect(page.locator('.sidebar > section').first()).toHaveAttribute('aria-labelledby', 'ph-points')
+  await expect(page.locator('.sheet-body > section').first()).toHaveAttribute('aria-labelledby', 'ph-points')
   await expect(page.locator('#ph-layers')).toHaveCount(0)
 
   await dayChip('Phase 1').click()

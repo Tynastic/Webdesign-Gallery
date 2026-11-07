@@ -13,8 +13,9 @@ type PaintMode = 'assign' | 'own'
  *  - own:    record a conquest that already happened (changes the map colours)
  *
  * click / drag paints · starting on a province already painted with the target
- * toggles back (erase / restore original owner) · Shift+click paints the whole
- * connected territory of the province's current owner · right-click erases ·
+ * toggles back (erase / restore original owner) · Shift+click (or the "whole
+ * territory" option, for touch screens) paints the whole connected territory of
+ * the province's current owner · right-click erases ·
  * hold Space to pan. (Alt+click is reserved for pings.)
  */
 export class PaintTool implements Tool {
@@ -88,10 +89,11 @@ export class PaintTool implements Tool {
     if (this.spaceHeld || ev.button !== 0) return
     const id = this.hit(e)
     if (id === null) return
+    const whole = ev.shiftKey || this.ctx.session.paintArea === 'all'
     if (this.taking) {
       if (!this.planned(id)) return this.ctx.setHint('hint.taken.notPlanned')
-      if (ev.shiftKey) return this.takeAll(id)
-    } else if (ev.shiftKey) return this.fillTerritory(id)
+      if (whole) return this.takeAll(id)
+    } else if (whole) return this.fillTerritory(id)
 
     const target = this.taking ? this.planned(id) : this.target
     const erase = target === null || this.current(id) === target

@@ -48,7 +48,8 @@ async function remove(id: string) {
 </script>
 
 <template>
-  <PanelSection id="layers" :title="t('panel.layers')" :badge="layers.size">
+  <!-- Closed until needed: most plans draw on one layer, and the options bar names the layer new drawings go to. -->
+  <PanelSection id="layers" :title="t('panel.layers')" :badge="layers.size" :default-open="false">
     <template #actions>
       <button class="icon-btn sm" :title="t('layers.new')" :aria-label="t('layers.new')" @click="add"><Plus :size="15" /></button>
     </template>

@@ -1,4 +1,5 @@
 import { ref, watchEffect } from 'vue'
+import { touchScreen } from '../state/device'
 import { de } from './de'
 import { en, type Messages } from './en'
 
@@ -48,10 +49,13 @@ watchEffect(() => {
 
 /**
  * Translate a key. `{name}` placeholders are filled from params; a message of
- * the form "one|many" picks a form by params.n.
+ * the form "one|many" picks a form by params.n. On touch screens a "<key>.touch"
+ * variant wins when there is one (tap instead of click, buttons instead of keys).
  */
 export function t(key: MessageKey, params?: Params): string {
-  let msg: string = dicts[locale.value][key] ?? en[key] ?? key
+  const dict = dicts[locale.value]
+  const touch = touchScreen.value ? (`${key}.touch` as MessageKey) : null
+  let msg: string = (touch && (dict[touch] ?? en[touch])) || (dict[key] ?? en[key] ?? key)
   if (params && typeof params.n === 'number' && msg.includes('|')) {
     const [one, many] = msg.split('|')
     msg = params.n === 1 ? one : many

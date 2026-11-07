@@ -2,6 +2,7 @@
 import { X } from 'lucide-vue-next'
 import { computed, ref, watch } from 'vue'
 import { t } from '../i18n'
+import { touchScreen } from '../state/device'
 import { TOOLS, toolHelp, toolLabel } from './toolCatalog'
 
 const open = defineModel<boolean>('open', { required: true })
@@ -34,6 +35,14 @@ const draw = computed<[string, string][]>(() => [
   [t('key.backspace'), t('help.drawBack')],
   [t('key.drag'), t('help.drawDrag')],
 ])
+const touch = computed<[string, string][]>(() => [
+  [t('gesture.tap'), t('help.touchTap')],
+  [t('gesture.drag'), t('help.touchDrag')],
+  [t('gesture.twoFingers'), t('help.touchTwoFingers')],
+  [t('gesture.longPress'), t('help.touchLongPress')],
+  [`${t('options.draftFinish')} · ↶ ↷`, t('help.touchButtons')],
+  [t('gesture.panel'), t('help.touchPanel')],
+])
 </script>
 
 <template>
@@ -45,14 +54,23 @@ const draw = computed<[string, string][]>(() => [
     <div class="help-grid">
       <section>
         <h3>{{ t('help.tools') }}</h3>
-        <dl class="keys">
+        <dl class="keys" :class="{ 'no-keys': touchScreen }">
           <template v-for="tool in TOOLS" :key="tool.id">
-            <dt><kbd>{{ tool.key }}</kbd></dt>
+            <dt v-if="!touchScreen"><kbd>{{ tool.key }}</kbd></dt>
             <dd><b>{{ toolLabel(tool.id) }}</b> — {{ toolHelp(tool.id) }}</dd>
           </template>
         </dl>
       </section>
-      <section>
+      <section v-if="touchScreen" class="help-touch">
+        <h3>{{ t('help.touch') }}</h3>
+        <dl class="keys">
+          <template v-for="[k, v] in touch" :key="k">
+            <dt><b>{{ k }}</b></dt>
+            <dd>{{ v }}</dd>
+          </template>
+        </dl>
+      </section>
+      <section v-else>
         <h3>{{ t('help.general') }}</h3>
         <dl class="keys">
           <template v-for="[k, v] in general" :key="k">

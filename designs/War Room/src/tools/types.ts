@@ -4,7 +4,7 @@ import type { MessageKey, Params } from '../i18n'
 import type { NationCatalog } from '../map/nations'
 import type { ProvinceIndex } from '../map/provinceIndex'
 import type { MapData } from '../map/types'
-import type { SessionState, ToolId } from '../state/session'
+import type { DraftCommand, SessionState, ToolId } from '../state/session'
 
 export interface ToolContext {
   map: L.Map
@@ -62,6 +62,8 @@ export interface Tool {
   onObjectDown?(id: string, e: L.LeafletMouseEvent): void
   /** Return true if the key was handled. */
   onKey?(e: KeyboardEvent): boolean
+  /** Finish, step back or cancel the drawing in progress (the options bar's buttons; Enter, Backspace, Esc). */
+  command?(c: DraftCommand): void
   /** Re-render tool overlays after the plan or selection changed. */
   refresh?(): void
 }

@@ -9,7 +9,7 @@ import { t } from '../i18n'
 import { fmtNum, fmtPoints, kindLabel, resourceLabel } from '../i18n/format'
 import { escapeHtml } from '../render/icons'
 import { resourceSvg } from '../render/resourceGlyphs'
-import type { SessionState, ToolId } from '../state/session'
+import type { DraftCommand, SessionState, ToolId } from '../state/session'
 import type { MatchState } from '../sync/match'
 import type { Presence } from '../sync/presence'
 import { MeasureTool } from '../tools/measureTool'
@@ -69,6 +69,13 @@ export class PlannerMap {
   /** A click whose pointerdown happened before the last tool drag ended belongs to that drag and is swallowed. */
   private dragEndedAt = -Infinity
   private lastDownAt = 0
+  /** The last press came from a finger (no hover, long-press instead of right-click). */
+  private touchInput = false
+  private lastPointer = -1
+  /** Ends the running tool drag and reverts it (a second finger turned it into a pinch). */
+  private cancelDrag: (() => void) | null = null
+  private lastPingAt = -Infinity
+  private readonly resizeObserver: ResizeObserver
 
   constructor(
     el: HTMLElement,
@@ -172,9 +179,14 @@ export class PlannerMap {
       (e) => {
         this.lastDownAt = e.timeStamp
         this.pointerDown = true
+        this.touchInput = e.pointerType === 'touch'
+        // A second finger during a tool drag (paint stroke, moving a drawing) is a pinch: drop the drag.
+        if (this.cancelDrag && e.pointerId !== this.lastPointer) this.cancelDrag()
+        else this.lastPointer = e.pointerId
       },
       true,
     )
+    adaptTouch(el)
     const release = () => (this.pointerDown = false)
     document.addEventListener('pointerup', release)
     document.addEventListener('pointercancel', release)
@@ -198,7 +210,15 @@ export class PlannerMap {
       this.tool.onClick?.(e)
     })
     this.map.on('dblclick', (e) => this.tool.onDblClick?.(e))
-    this.map.on('contextmenu', (e) => this.tool.onContextMenu?.(e))
+    this.map.on('contextmenu', (e) => {
+      if (!this.touchInput) return this.tool.onContextMenu?.(e)
+      // Long-press: pings the spot in the select tool (touch has no Alt+click). Elsewhere it is ignored:
+      // in the paint tools the press has already painted. Some browsers fire both their own and Leaflet's long-press.
+      const now = performance.now()
+      if (this.tool.id !== 'select' || e.sourceTarget !== this.map || now - this.lastPingAt < 800) return
+      this.lastPingAt = now
+      ctx.ping(toPoint(e.latlng))
+    })
 
     plan.ownership.observe(() => this.syncOwners())
     plan.assignments.observe(() => this.syncMarks())
@@ -227,6 +247,14 @@ export class PlannerMap {
       this.syncCopies()
       this.tool.refresh?.() // handles and drafts follow the view to the copy it now shows
     })
+
+    // Leaflet only notices window resizes; the phone's panel sheet resizes the map on its own.
+    let resizeFrame = 0
+    this.resizeObserver = new ResizeObserver(() => {
+      cancelAnimationFrame(resizeFrame)
+      resizeFrame = requestAnimationFrame(() => this.map.invalidateSize({ pan: false }))
+    })
+    this.resizeObserver.observe(el)
 
     const fitWorld = () => {
       this.map.setMinZoom(Math.floor(this.map.getBoundsZoom(world) * 4) / 4)
@@ -286,6 +314,11 @@ export class PlannerMap {
     this.session.hoveredProvince = null
     this.tool.refresh?.()
     this.refreshHint()
+  }
+
+  /** The options bar's buttons for the drawing in progress. */
+  command(c: DraftCommand) {
+    this.tool.command?.(c)
   }
 
   /** Forward a keydown to the active tool; true if it consumed the key. */
@@ -469,6 +502,7 @@ export class PlannerMap {
   }
 
   destroy() {
+    this.resizeObserver.disconnect()
     cancelAnimationFrame(this.ownersFrame)
     cancelAnimationFrame(this.moveFrame)
     this.tool.deactivate?.()
@@ -488,7 +522,8 @@ export class PlannerMap {
     if (id === this.session.hoveredProvince) return
     this.session.hoveredProvince = id
     this.marks.setHighlight(id, this.session.selectedProvince)
-    if (id === null || DRAW_TOOLS.has(this.tool.id)) {
+    // Touch screens have no hover: a tap would leave the tooltip standing (the province panel shows the same).
+    if (id === null || DRAW_TOOLS.has(this.tool.id) || this.touchInput) {
       this.tooltip.remove()
       return
     }
@@ -530,6 +565,9 @@ export class PlannerMap {
     this.undo.stopCapturing()
     const wasDraggable = map.dragging.enabled()
     map.dragging.disable()
+    // Only the finger (or mouse) that started the drag moves it.
+    const pointer = this.lastPointer
+    const undoDepth = this.undo.undoStack.length
     let moved = false
     let done = false
     const toLeaflet = (ev: PointerEvent): L.LeafletMouseEvent => {
@@ -537,23 +575,59 @@ export class PlannerMap {
       return { latlng, layerPoint: map.latLngToLayerPoint(latlng), containerPoint: map.mouseEventToContainerPoint(ev), originalEvent: ev } as unknown as L.LeafletMouseEvent
     }
     const move = (ev: PointerEvent) => {
+      if (ev.pointerId !== pointer) return
       moved = true
       onMove(toLeaflet(ev))
     }
-    const finish = (ev: PointerEvent) => {
-      if (done) return
+    const finish = (ev: PointerEvent | null) => {
+      if (done || (ev && ev.pointerId !== pointer)) return
       done = true
+      this.cancelDrag = null
       document.removeEventListener('pointermove', move)
       document.removeEventListener('pointerup', finish)
       document.removeEventListener('pointercancel', finish)
       if (wasDraggable) map.dragging.enable()
       // The click that follows a drag must not (de)select or place anything.
-      if (moved) this.dragEndedAt = ev.timeStamp
+      if (moved && ev) this.dragEndedAt = ev.timeStamp
       this.undo.stopCapturing()
-      onEnd(ev.type === 'pointerup' ? toLeaflet(ev) : null)
+      onEnd(ev?.type === 'pointerup' ? toLeaflet(ev) : null)
+    }
+    this.cancelDrag = () => {
+      finish(null)
+      while (this.undo.undoStack.length > undoDepth) this.undo.undo()
     }
     document.addEventListener('pointermove', move)
     document.addEventListener('pointerup', finish)
     document.addEventListener('pointercancel', finish)
   }
+}
+
+/**
+ * Touch screens send a finger's mousedown only after it lifts, and only for a tap, so the tools
+ * could never start a drag (paint strokes, moving drawings, dragging handles). Hand Leaflet a
+ * mousedown as soon as one finger lands instead, and drop the browser's late one. It is sent from
+ * touchstart, after Leaflet's own touch panning has claimed the gesture, so it cannot start a
+ * second, mouse-driven pan.
+ */
+function adaptTouch(el: HTMLElement) {
+  let lastTouch = -Infinity
+  el.addEventListener(
+    'touchstart',
+    (e) => {
+      lastTouch = performance.now()
+      if (e.touches.length !== 1) return
+      const t = e.touches[0]
+      e.target?.dispatchEvent(
+        new MouseEvent('mousedown', { bubbles: true, cancelable: true, view: window, button: 0, buttons: 1, clientX: t.clientX, clientY: t.clientY, screenX: t.screenX, screenY: t.screenY }),
+      )
+    },
+    { passive: true },
+  )
+  el.addEventListener(
+    'mousedown',
+    (e) => {
+      if (e.isTrusted && performance.now() - lastTouch < 1000) e.stopImmediatePropagation()
+    },
+    true,
+  )
 }

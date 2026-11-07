@@ -159,7 +159,7 @@ async function importFile(e: Event) {
       @keydown.enter="($event.target as HTMLInputElement).blur()"
     />
     <span class="conn" :class="status" :title="statusInfo.title" role="status">
-      <component :is="statusInfo.icon" :size="14" :class="{ spin: status === 'connecting' }" />{{ statusInfo.text }}
+      <component :is="statusInfo.icon" :size="14" :class="{ spin: status === 'connecting' }" /><span class="conn-text">{{ statusInfo.text }}</span>
     </span>
     <SearchBox />
     <div class="topbar-actions">
@@ -184,7 +184,7 @@ async function importFile(e: Event) {
         <Users :size="15" /><span class="menu-btn-label">{{ t('top.lineup') }}</span><span class="lineup-count">{{ playersTotal }}/{{ PLAYABLE.length }}</span>
       </button>
       <button class="me-chip" :title="t('top.identity')" @click="$emit('identity')">
-        <span v-if="myTeamColor" class="team-swatch" :style="{ background: myTeamColor }" :title="teamLabel(myRole!.team)" />{{ meName }}
+        <span v-if="myTeamColor" class="team-swatch" :style="{ background: myTeamColor }" :title="teamLabel(myRole!.team)" /><span class="me-name">{{ meName }}</span>
       </button>
       <div class="btn-group" role="group" :aria-label="t('top.history')">
         <button class="icon-btn" :disabled="!undoState.canUndo" :title="t('common.withKeys', { label: t('top.undo'), keys: `${t('key.ctrl')}+Z` })" :aria-label="t('top.undo')" @click="undo.undo()"><Undo2 :size="18" /></button>
