@@ -80,7 +80,16 @@ This needs a public IPv4 address, so DS-Lite connections can't use it.
 
 ## C. Oracle Cloud Always Free VM
 
-Oracle's Always Free tier includes ARM (Ampere A1) VMs with up to 2 OCPUs and 12 GB of RAM in total. One small VM runs setup B without any changes, and the images used here are available for ARM. Oracle changes free-tier limits from time to time, so check the current [Always Free resources](https://docs.oracle.com/en-us/iaas/Content/FreeTier/freetier_topic-Always_Free_Resources.htm) before you start.
+Oracle's Always Free tier includes two kinds of VMs. Both run setup B:
+
+| Shape | Size | How to deploy |
+|---|---|---|
+| `VM.Standard.A1.Flex` (ARM) | up to 2 OCPUs and 12 GB of RAM in total | Build the image on the VM ([6a](#6a-build-on-the-vm-a1)) |
+| `VM.Standard.E2.1.Micro` (x86) | 1/8 OCPU, 1 GB of RAM; up to two of them | Build the image in WSL and copy it to the VM ([6b](#6b-build-in-wsl-copy-from-windows-e21micro)) |
+
+A1 is the better choice, but Frankfurt often has no A1 capacity. The Micro VM is enough to run the app for a handful of testers. It is too small to build the image, because `npm ci` and the client build run out of memory. Your PC also uses x86, so an image built in WSL runs on the Micro VM unchanged.
+
+Oracle changes free-tier limits from time to time, so check the current [Always Free resources](https://docs.oracle.com/en-us/iaas/Content/FreeTier/freetier_topic-Always_Free_Resources.htm) before you start.
 
 ### 1. Create the account
 
@@ -98,8 +107,8 @@ Under Compute → Instances → **Create instance**:
 
 | Setting | Value |
 |---|---|
-| Image | Canonical Ubuntu 24.04 (the aarch64 build is picked automatically for Ampere) |
-| Shape | Ampere → `VM.Standard.A1.Flex`, **1 OCPU, 6 GB** (well within the free limit; up to 2 OCPUs / 12 GB in total) |
+| Image | Canonical Ubuntu 24.04 (the matching aarch64 or x86 build is picked for the shape) |
+| Shape | Ampere → `VM.Standard.A1.Flex`, **1 OCPU, 6 GB** (well within the free limit). If there's no capacity: AMD → `VM.Standard.E2.1.Micro` |
 | Networking | Create a new VCN with a **public subnet**, and assign a public IPv4 address |
 | SSH keys | Upload your own public key (`ssh-keygen -t ed25519` creates one), or download the generated key pair and keep the private key safe |
 | Boot volume | The default 47–50 GB is enough (up to 200 GB in total are free) |
@@ -140,6 +149,14 @@ sudo usermod -aG docker ubuntu
 exit                                                # log in again so the group applies
 ```
 
+**On the E2.1.Micro VM, also add 2 GB of swap.** It's a safety net: if memory runs out, the VM slows down instead of the app crashing.
+
+```sh
+sudo fallocate -l 2G /swapfile && sudo chmod 600 /swapfile
+sudo mkswap /swapfile && sudo swapon /swapfile
+echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
+```
+
 ### 5. Get a domain name
 
 Caddy needs a host name that points to the VM. A free one is enough:
@@ -151,20 +168,65 @@ The public IP stays the same as long as the instance exists, including across re
 
 ### 6. Deploy
 
+On either VM, first get the repository and create `.env`. The VM needs the compose file, the Caddyfile and the legal pages even if the image is built elsewhere.
+
 ```sh
 git clone https://github.com/Tynastic/Webdesign-Gallery.git war-room
 cd "war-room/designs/War Room"
 cp .env.example .env
 nano .env                                          # DOMAIN=warroom-xyz.duckdns.org
 echo "ADMIN_TOKEN=$(openssl rand -base64 32)" >> .env
+```
+
+- **Private repository:** clone over SSH with a [deploy key](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/managing-deploy-keys) (a read-only key for this repository only), or with a fine-grained personal access token.
+- **`.env` is created on the VM,** so it already has Linux line endings, and it is never committed.
+
+Then continue with 6a or 6b, depending on the shape.
+
+#### 6a. Build on the VM (A1)
+
+```sh
 export APP_COMMIT=$(git rev-parse --short HEAD)
 docker compose up -d --build                       # the first build takes a few minutes
 docker compose logs -f app                         # wait for "War Room … on http://localhost:1234"
 ```
 
-- **Private repository:** clone over SSH with a [deploy key](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/managing-deploy-keys) (a read-only key for this repository only), or with a fine-grained personal access token.
-- **`.env` is created on the VM,** so it already has Linux line endings, and it is never committed.
-- **Check it:** open `https://<your-domain>` and create a test room. The first request can take a few seconds while Caddy obtains the certificate. If it fails, `docker compose logs caddy` usually names the cause: a wrong DNS entry, or port 80 blocked by one of the two firewalls in step 3.
+#### 6b. Build in WSL, copy from Windows (E2.1.Micro)
+
+Each step runs in a different place. Check the prompt before typing: `ubuntu@…` means you're on the VM.
+
+1. **WSL on your PC:** build the image and save it to a file on the Windows side.
+
+   ```sh
+   cd "/mnt/c/Users/<you>/Documents/Coding/Webdesign/designs/War Room"
+   docker build --build-arg APP_COMMIT=$(git rev-parse --short HEAD) -t cow-app .
+   docker save cow-app | gzip > /mnt/c/Users/<you>/cow-app.tar.gz
+   ```
+
+   Compose expects the name `cow-app`, because the project name is pinned to `cow`. The file is about 60 MB.
+2. **PowerShell on your PC:** copy the file to the VM's home folder. This uses Windows' own SSH key, so WSL needs no SSH setup.
+
+   ```powershell
+   scp C:\Users\<you>\cow-app.tar.gz ubuntu@<public-ip>:
+   ```
+
+   With a key that Oracle generated, add `-i <path to the .key file>` after `scp`.
+3. **On the VM:** load the image and start everything without building.
+
+   ```sh
+   gunzip -c ~/cow-app.tar.gz | docker load && rm ~/cow-app.tar.gz   # "Loaded image: cow-app:latest"
+   cd "war-room/designs/War Room"
+   docker compose up -d --no-build
+   docker compose logs -f app                       # wait for "War Room … on http://localhost:1234"
+   ```
+
+   `docker load` on its own fails with "stdin is empty". It needs the image piped in, as above.
+
+**Shortcut:** if WSL has its own SSH key, steps 1–3 shrink to the build plus one command in WSL: `docker save cow-app | gzip | ssh ubuntu@<public-ip> 'gunzip | docker load'`. WSL can't use the key from `C:\Users\<you>\.ssh` directly, because `ssh` rejects keys stored under `/mnt/c` as too widely readable. Copy it into `~/.ssh/` and run `chmod 600` on it.
+
+#### Check it
+
+Open `https://<your-domain>` and create a test room. The first request can take a few seconds while Caddy obtains the certificate. If it fails, `docker compose logs caddy` usually names the cause: a wrong DNS entry, or port 80 blocked by one of the two firewalls in step 3.
 
 ### 7. Before inviting testers
 
@@ -180,7 +242,15 @@ docker compose logs -f app                         # wait for "War Room … on h
 
 - **Security updates.** Ubuntu installs security updates automatically (`unattended-upgrades`). Reboot now and then with `sudo reboot`; the containers come back by themselves.
 
-To update the app later, run `git pull` and then follow [Updating](#updating).
+### Updating on Oracle
+
+- **A1:** run `git pull` on the VM, then follow [Updating](#updating).
+- **E2.1.Micro:**
+  1. On the VM, make a backup (first command in [Updating](#updating)) and run `git pull`, so the compose file and legal pages match the new image.
+  2. Repeat steps 1 and 2 of [6b](#6b-build-in-wsl-copy-from-windows-e21micro) on your PC, from the same commit.
+  3. On the VM, load the image as in step 3 and run `docker compose up -d --no-build app`.
+  4. Wait until `docker compose ps` shows "healthy". Old images pile up over time; remove them with `docker image prune -f`.
+- **Moving from Micro to A1 later:** make a backup, set up the A1 VM with 6a, restore the backup there (see [Backups](#backups)), and point DuckDNS at the new IP.
 
 ## Legal pages
 
