@@ -2,7 +2,7 @@
 export const en = {
   // ---------- app ----------
   'app.name': 'War Room',
-  'app.tagline': 'Call of War · 1942',
+  'app.tagline': 'Call of War · Axis vs Allies 1940',
   'plan.untitled': 'Untitled plan',
   'layer.general': 'General',
 

@@ -4,7 +4,7 @@ import type { Messages } from './en'
 export const de: Messages = {
   // ---------- App ----------
   'app.name': 'War Room',
-  'app.tagline': 'Call of War · 1942',
+  'app.tagline': 'Call of War · Achse vs Alliierte 1940',
   'plan.untitled': 'Unbenannter Plan',
   'layer.general': 'Allgemein',
 
@@ -50,7 +50,7 @@ export const de: Messages = {
   'error.toLobby': 'Zur Lobby',
 
   // ---------- Lobby ----------
-  'lobby.intro': 'Der Informationsraum als Dimension des Krieges. Plane militärische Operationen, teile die Karte auf, berechne die Punkte.',
+  'lobby.intro': 'Der Informationsraum als Dimension des Krieges. Plane militärische Operationen, teile die Karte auf, berechne Christians Punktesystem. Bei allem im Regelwerk kann dir aber nur Gott und Christian helfen.',
   'lobby.new': 'Neuer gemeinsamer Plan',
   'lobby.name': 'Name',
   'lobby.namePlaceholder': 'z. B. Achse — Runde 1942-17',

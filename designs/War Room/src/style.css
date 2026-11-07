@@ -217,7 +217,16 @@ kbd {
 }
 .swatch-dot { width: 14px; height: 14px; border-radius: 50%; box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.4); }
 
-.player-pick { display: flex; gap: 6px; }
+.player-pick { display: flex; gap: 6px; min-width: 0; }
+/* Many players: the chips take lines of their own under the mode switches, each team starting a new line,
+   at most four lines and a quarter of the window (then they scroll). Phones get one row to swipe instead
+   (see the 720px block). */
+.player-pick.many {
+  flex: 1 1 100%; flex-wrap: wrap; justify-content: center; max-height: min(25vh, 156px); padding: 3px;
+  overflow-y: auto; scrollbar-width: thin;
+}
+.player-pick.many .pick-sep { flex-basis: 100%; height: 0; }
+.pick-chip { flex: none; }
 .pick-chip {
   display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 8px 0 10px;
   background: var(--bg); border: 1px solid var(--line); border-radius: 15px; font-size: 13px; font-weight: 600; white-space: nowrap;
@@ -808,6 +817,12 @@ body:has(.legal), body:has(.lobby) { overflow-y: auto; }
   .shell.sheet-full .map-chrome { display: none; }
   .sheet-body { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding-bottom: env(safe-area-inset-bottom); }
   .help-grid { grid-template-columns: 1fr; }
+  .player-pick, .player-pick.many {
+    flex: 1 1 100%; flex-wrap: nowrap; justify-content: flex-start; max-height: none; padding: 3px;
+    overflow-x: auto; overflow-y: hidden; scrollbar-width: none;
+  }
+  .player-pick::-webkit-scrollbar { display: none; }
+  .player-pick.many .pick-sep { flex-basis: auto; height: 22px; }
   .toolbar { flex-direction: row; justify-content: center; padding: 4px 8px; overflow-x: auto; border-right: 0; border-bottom: 1px solid var(--line); }
   .toolbar-sep { width: 1px; height: 24px; margin: 0 4px; }
   .tool-tip { display: none; }

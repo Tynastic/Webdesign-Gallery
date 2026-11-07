@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Check, Eraser, RotateCcw, Undo2, X } from 'lucide-vue-next'
-import { computed, ref } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
 import { distanceFactor, setDistanceFactor, type ArrowVariant, type FrontVariant, type ZoneVariant } from '../../shared/schema'
 import { useMatch } from '../composables/useMatch'
 import { usePoints } from '../composables/usePoints'
@@ -65,6 +65,18 @@ const paintTarget = computed({
   get: () => (session.tool === 'assign' ? session.assignNation : session.ownNation),
   set: (v: string | null) => (session.tool === 'assign' ? (session.assignNation = v) : (session.ownNation = v)),
 })
+/** From this many players on, each team's chips start a line of their own (they no longer fit in one row). */
+const MANY_PLAYERS = 8
+const pickRow = ref<HTMLElement | null>(null)
+// The chip row scrolls when it holds many players: keep the chosen one in sight (number keys pick off-screen ones too).
+watch(
+  () => [session.tool, paintTarget.value],
+  async () => {
+    await nextTick()
+    pickRow.value?.querySelector('[aria-checked="true"]')?.scrollIntoView({ block: 'nearest', inline: 'nearest' })
+  },
+)
+
 /** The ownership target when it is a nation without a chip (AI nations). */
 const otherOwner = computed(() => (session.ownNation && !rosterList.value.some((n) => n.id === session.ownNation) ? session.ownNation : ''))
 function pickOtherOwner(id: string) {
@@ -125,7 +137,12 @@ const iconColor = computed(() => session.drawColor ?? myRole.value?.color ?? '#f
     <template v-if="session.tool === 'assign' || session.tool === 'own'">
       <Segmented v-if="session.tool === 'assign'" v-model="session.planMode" :options="planModes" :label="t('options.planMode')" :title="t('options.planModeTitle')" />
       <Segmented v-model="session.paintArea" :options="areas" :label="t('options.area')" :title="taking ? t('options.areaTitleTaken') : t('options.areaTitle')" />
-      <div v-if="session.tool === 'own' || session.planMode === 'plan'" class="player-pick" role="radiogroup" :aria-label="session.tool === 'assign' ? t('options.planFor') : t('options.conqueredBy')">
+      <div
+        v-if="session.tool === 'own' || session.planMode === 'plan'"
+        ref="pickRow"
+        class="player-pick"
+        :class="{ many: rosterList.length > MANY_PLAYERS }"
+        role="radiogroup" :aria-label="session.tool === 'assign' ? t('options.planFor') : t('options.conqueredBy')">
         <template v-for="(n, i) in rosterList" :key="n.id">
         <span v-if="n.newTeam" class="pick-sep" aria-hidden="true" />
         <button

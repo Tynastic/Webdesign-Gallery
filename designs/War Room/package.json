@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.5.0",
   "type": "module",
-  "description": "War Room – collaborative strategy map for Call of War: Supremacy 1942",
+  "description": "War Room – collaborative strategy map for Call of War",
   "scripts": {
     "dev": "concurrently -k -n web,sync -c yellow,cyan \"vite\" \"npm:server:dev\"",
     "server:dev": "node --no-warnings=ExperimentalWarning --env-file-if-exists=.env --watch server/index.ts",
