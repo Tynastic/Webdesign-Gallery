@@ -1,4 +1,5 @@
 import { CanvasLayer, flatPath, useMapSpace, type View } from './canvasLayer'
+import { PAPER } from './color'
 import { copiesIn } from './coords'
 import type { ProvinceIndex } from './provinceIndex'
 import type { MapData } from './types'
@@ -6,7 +7,6 @@ import type { MapData } from './types'
 const OCEAN_DEEP = '#7fa6bb'
 const OCEAN = '#9dbfd0'
 const SHALLOWS = '#bcd6e1'
-const PAPER = '#e9e1cc'
 /** Grid spacing that divides the world width evenly, so the grid is seamless where the map wraps. */
 const GRID_COLUMNS = 14
 const GRID_ROW = 1000
@@ -129,19 +129,3 @@ export class BaseMapLayer extends CanvasLayer {
   }
 }
 
-/** Mix two colours ("rgb(...)" or "#rrggbb"), t = share of b. */
-export function mix(a: string, b: string, t: number): string {
-  const [r1, g1, b1] = parseColor(a)
-  const [r2, g2, b2] = parseColor(b)
-  const m = (x: number, y: number) => Math.round(x + (y - x) * t)
-  return `rgb(${m(r1, r2)},${m(g1, g2)},${m(b1, b2)})`
-}
-
-export function parseColor(c: string): [number, number, number] {
-  if (c.startsWith('#')) {
-    const n = parseInt(c.slice(1), 16)
-    return [(n >> 16) & 255, (n >> 8) & 255, n & 255]
-  }
-  const [r, g, b] = c.match(/\d+/g)!.map(Number)
-  return [r, g, b]
-}

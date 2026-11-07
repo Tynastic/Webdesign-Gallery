@@ -4,12 +4,13 @@ import { importLineup } from '../../shared/lineup'
 import { deleteObjects, legacyLineup, LOCAL_ORIGIN } from '../../shared/schema'
 import { useMap } from '../composables/useMap'
 import { useMatch } from '../composables/useMatch'
+import { providePoints } from '../composables/usePoints'
 import { useYArray, useYMap } from '../composables/useY'
 import { t, tm } from '../i18n'
 import type { NationCatalog } from '../map/nations'
 import type { MapData } from '../map/types'
 import { toast } from '../state/feedback'
-import { loadPlayer, savePlayer, session, takeLegacyNation, type ToolId } from '../state/session'
+import { loadPlayer, savePlayer, session, stepPhase, takeLegacyNation, type ToolId } from '../state/session'
 import type { PlanHandle } from '../sync/planDoc'
 import { CloudOff, Eye, Info, X } from 'lucide-vue-next'
 import ConfirmDialog from './ConfirmDialog.vue'
@@ -36,9 +37,19 @@ const { plan, lineup, undo, presence, room, match: matchState, canOrganize } = p
 
 const mapEl = ref<HTMLElement | null>(null)
 const planner = useMap(mapEl, props.data, props.catalog, plan, undo, presence, matchState, { lineup })
-providePlanner({ data: props.data, catalog: props.catalog, plan, lineup, undo, handle: props.handle, planner })
+const ownership = useYMap(plan.ownership)
+const owners = computed(() => props.catalog.owners(ownership.value.entries()))
+const held = computed(() => {
+  const counts = new Int32Array(props.catalog.list.length)
+  for (const o of owners.value) counts[o]++
+  return counts
+})
+const ctx = { data: props.data, catalog: props.catalog, plan, lineup, undo, handle: props.handle, planner, owners, held }
+providePlanner(ctx)
 
-const { match, role, label, playerNations } = useMatch({ handle: props.handle, catalog: props.catalog })
+const { match, role, label, playerNations } = useMatch(ctx)
+// One points calculation for every panel that shows points.
+providePoints(ctx, match)
 const players = useYMap(plan.players)
 const phases = useYArray(plan.phases)
 const helpOpen = ref(false)
@@ -207,14 +218,6 @@ function deleteSelection() {
   toast(t('toast.deleted', { what: toolLabel(obj.type) }), { label: t('common.undo'), run: () => undo.undo() })
 }
 
-function stepPhase(dir: 1 | -1) {
-  const list = phases.value
-  if (!list.length) return
-  const i = session.activePhase ? list.findIndex((p) => p.id === session.activePhase) : -1
-  const next = i + dir
-  session.activePhase = next < 0 || next >= list.length ? null : list[next].id
-}
-
 function onKey(e: KeyboardEvent) {
   if (helpOpen.value || joinOpen.value || session.lineupOpen) return
   if (isTyping(e)) {
@@ -242,8 +245,8 @@ function onKey(e: KeyboardEvent) {
   }
   if (e.key === '?') return void (helpOpen.value = true)
   if (e.key.toLowerCase() === 'l') return void (session.lineupOpen = true)
-  if (e.key === '[') return stepPhase(-1)
-  if (e.key === ']') return stepPhase(1)
+  if (e.key === '[') return stepPhase(phases.value, -1)
+  if (e.key === ']') return stepPhase(phases.value, 1)
   if ((session.tool === 'assign' || session.tool === 'own') && /^[0-9]$/.test(e.key)) {
     const ids = playerNations.value.map((r) => r.nation)
     const pick = e.key === '0' ? null : (ids[Number(e.key) - 1] ?? undefined)

@@ -1,6 +1,6 @@
 import L from 'leaflet'
 import { distanceFactor, phaseVisibility, type ObjectiveIcon, type Plan, type PlanObject, type Point, type UnitType } from '../../shared/schema'
-import { mix } from '../map/baseLayer'
+import { mix } from '../map/color'
 import { toLatLng } from '../map/coords'
 import type { SessionState } from '../state/session'
 import { arrowPolygon, midpoint, smoothLine } from './arrowGeometry'
@@ -161,7 +161,8 @@ export const shiftObject = (o: PlanObject, dx: number): PlanObject =>
  */
 export class ObjectRenderer {
   readonly group = L.layerGroup()
-  private readonly rendered = new Map<string, { key: string; layers: L.Layer[] }>()
+  /** Per object: the stored value it was built from (Yjs hands out the same object until it is replaced), the display state, the layers. */
+  private readonly rendered = new Map<string, { obj: PlanObject; key: string; layers: L.Layer[] }>()
   /** World copies (offset k · worldWidth) currently drawn. */
   private copies: number[] = [0]
   /** How stored colours are shown; set by the map (the Teams mode mutes nation colours). */
@@ -194,16 +195,16 @@ export class ObjectRenderer {
       if (vis === 'hidden' || this.session.hiddenLayers.includes(o.layerId)) continue
       seen.add(o.id)
       const selected = this.session.selectedObject === o.id
-      const key = `${JSON.stringify(o)}|${this.displayColor(o.color)}|${vis}|${selected}|${this.copies.join()}|${factor}|${locale.value}`
+      const key = `${this.displayColor(o.color)}|${vis}|${selected}|${this.copies.join()}|${factor}|${locale.value}`
       const cur = this.rendered.get(o.id)
-      if (cur?.key === key) continue
+      if (cur?.obj === o && cur.key === key) continue
       cur?.layers.forEach((l) => this.group.removeLayer(l))
       const layers = this.copies.flatMap((k) => buildLayers(shiftObject(o, k * this.worldWidth), { renderer: this.renderer, dim: vis === 'dim', selected, factor, displayColor: this.displayColor }))
       for (const l of layers) {
         l.on('mousedown', (e) => this.handlers.down(o.id, e as L.LeafletMouseEvent))
         this.group.addLayer(l)
       }
-      this.rendered.set(o.id, { key, layers })
+      this.rendered.set(o.id, { obj: o, key, layers })
     }
     for (const [id, r] of this.rendered)
       if (!seen.has(id)) {

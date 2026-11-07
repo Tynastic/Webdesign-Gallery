@@ -21,10 +21,9 @@ import { usePlanner } from './context'
  * buttons and pickers on each card; everyone else sees the same board read-only.
  */
 const open = defineModel<boolean>('open', { required: true })
-const { data, catalog, plan, lineup, handle, planner } = usePlanner()
+const { data, catalog, plan, lineup, handle, planner, owners, held } = usePlanner()
 const { match, byTeam, nationName } = useMatch()
 const players = useYMap(plan.players)
-const ownership = useYMap(plan.ownership)
 const organizer = handle.canOrganize
 const lineupUndo = handle.lineupUndo
 
@@ -52,12 +51,6 @@ const wishes = computed(() => {
 const seatableWishes = computed(() => bench.value.filter((p) => p.wish && !match.value.roles.get(p.wish)?.player))
 
 // ---------- team balance ----------
-const owners = computed(() => catalog.owners(ownership.value.entries()))
-const held = computed(() => {
-  const c = new Map<string, number>()
-  for (const o of owners.value) c.set(catalog.list[o].id, (c.get(catalog.list[o].id) ?? 0) + 1)
-  return c
-})
 const balance = computed(() =>
   (['axis', 'allies'] as Team[]).map((team) => {
     const roles = byTeam.value.get(team)!
@@ -66,7 +59,7 @@ const balance = computed(() =>
       nations: roles.length,
       players: roles.filter((r) => r.player).length,
       classes: [1, 2, 3].map((c) => roles.filter((r) => r.cls === c).length),
-      provinces: roles.reduce((s, r) => s + (held.value.get(r.nation) ?? 0), 0),
+      provinces: roles.reduce((s, r) => s + held.value[catalog.byId.get(r.nation)!.index], 0),
     }
   }),
 )

@@ -1,4 +1,4 @@
-import { inject, provide, type InjectionKey, type ShallowRef } from 'vue'
+import { inject, provide, type ComputedRef, type InjectionKey, type ShallowRef } from 'vue'
 import type * as Y from 'yjs'
 import type { Lineup } from '../../shared/lineup'
 import type { Plan } from '../../shared/schema'
@@ -15,6 +15,10 @@ export interface PlannerContext {
   undo: Y.UndoManager
   handle: PlanHandle
   planner: ShallowRef<PlannerMap | null>
+  /** Current owner (nation index) per province, shared by every panel. */
+  owners: ComputedRef<Int16Array>
+  /** Provinces held per nation index. */
+  held: ComputedRef<Int32Array>
 }
 
 const KEY: InjectionKey<PlannerContext> = Symbol('planner')

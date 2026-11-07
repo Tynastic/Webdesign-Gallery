@@ -5,7 +5,7 @@
  * changes, so listing hundreds of rooms stays cheap.
  */
 import * as Y from 'yjs'
-import { loadDocument } from './db.ts'
+import { documentSize, loadDocument } from './db.ts'
 
 export interface RoomContent {
   players: number
@@ -29,8 +29,8 @@ const cache = new Map<string, { key: string; content: RoomContent }>()
 
 function read(name: string): { doc: Y.Doc; bytes: number; live: boolean } {
   const live = liveDoc(name)
+  if (live) return { doc: live, bytes: documentSize(name), live: true }
   const stored = loadDocument(name)
-  if (live) return { doc: live, bytes: stored?.length ?? 0, live: true }
   const doc = new Y.Doc()
   if (stored) Y.applyUpdate(doc, stored)
   return { doc, bytes: stored?.length ?? 0, live: false }

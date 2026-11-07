@@ -1,21 +1,17 @@
-import { computed } from 'vue'
+import { computed, inject, provide, type InjectionKey, type ShallowRef } from 'vue'
+import type { Match } from '../../shared/match'
 import { dailyPoints, setOwners } from '../../shared/schema'
 import { planPoints, plannedCost, scopePoints, type PhaseScope, type PlannedConquest } from '../../shared/points'
 import { session } from '../state/session'
-import { usePlanner } from '../ui/context'
-import { useMatch } from './useMatch'
+import type { PlannerContext } from '../ui/context'
 import { useYArray, useYMap } from './useY'
 
 /** Live conquest points of the plan: per nation, per selected phases (days), and for any single province. */
-export function usePoints() {
-  const { data, catalog, plan, undo } = usePlanner()
-  const { match } = useMatch()
+function createPoints({ data, catalog, plan, undo, owners }: PlannerContext, match: ShallowRef<Match>) {
   const assignments = useYMap(plan.assignments)
-  const ownership = useYMap(plan.ownership)
   const phases = useYArray(plan.phases)
   const meta = useYMap(plan.meta)
 
-  const owners = computed(() => catalog.owners(ownership.value.entries()))
   const rules = computed(() => match.value.rules)
 
   function conquest(province: number, attacker: string, phaseId: string | null = null): PlannedConquest {
@@ -73,4 +69,20 @@ export function usePoints() {
     /** What conquering this province would cost the nation (as planned, or hypothetically). */
     costFor: (province: number, attacker: string) => plannedCost(conquest(province, attacker), rules.value),
   }
+}
+
+type Points = ReturnType<typeof createPoints>
+const KEY: InjectionKey<Points> = Symbol('points')
+
+/** Set up once by the planner, which provides the context itself (so it passes it in). */
+export function providePoints(ctx: PlannerContext, match: ShallowRef<Match>): Points {
+  const points = createPoints(ctx, match)
+  provide(KEY, points)
+  return points
+}
+
+export function usePoints(): Points {
+  const points = inject(KEY)
+  if (!points) throw new Error('usePoints() called outside <Planner>')
+  return points
 }

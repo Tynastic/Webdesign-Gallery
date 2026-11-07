@@ -45,6 +45,7 @@ const q = {
   getRoom: db.prepare('SELECT id, title, password_hash, owner_hash, created_at FROM rooms WHERE id = ?'),
   deleteRoom: db.prepare('DELETE FROM rooms WHERE id = ?'),
   getDoc: db.prepare('SELECT data FROM documents WHERE name = ?'),
+  docSize: db.prepare('SELECT LENGTH(data) AS bytes FROM documents WHERE name = ?'),
   putDoc: db.prepare(
     'INSERT INTO documents (name, data, updated_at) VALUES (?, ?, ?) ON CONFLICT(name) DO UPDATE SET data = excluded.data, updated_at = excluded.updated_at',
   ),
@@ -137,6 +138,9 @@ export function loadDocument(name: string): Uint8Array | null {
   const row = q.getDoc.get(name) as { data: Uint8Array } | undefined
   return row ? new Uint8Array(row.data) : null
 }
+
+/** Stored size in bytes (0 if never stored), without loading the document. */
+export const documentSize = (name: string) => (q.docSize.get(name) as { bytes: number } | undefined)?.bytes ?? 0
 
 export function storeDocument(name: string, state: Uint8Array) {
   q.putDoc.run(name, state, Date.now())

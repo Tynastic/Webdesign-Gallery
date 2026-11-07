@@ -19,19 +19,12 @@ import PanelSection from './PanelSection.vue'
  * its capital, and how its planned conquests are going. Teams and players are
  * changed in the line-up; this panel only reads them (plus the marker colour).
  */
-const { data, catalog, plan, planner } = usePlanner()
+const { data, catalog, plan, planner, owners, held } = usePlanner()
 const { byTeam, nationName, playersTotal } = useMatch()
 const assignments = useYMap(plan.assignments)
-const ownership = useYMap(plan.ownership)
 
-const owners = computed(() => catalog.owners(ownership.value.entries()))
 const startCount = new Map<number, number>()
 for (const p of data.provinces) startCount.set(p.nation, (startCount.get(p.nation) ?? 0) + 1)
-const held = computed(() => {
-  const c = new Map<number, number>()
-  for (const o of owners.value) c.set(o, (c.get(o) ?? 0) + 1)
-  return c
-})
 /** Planned provinces per nation and how many of them it already holds. */
 const progress = computed(() => {
   const out = new Map<string, { ids: number[]; done: number }>()
@@ -61,7 +54,7 @@ const groups = computed(() =>
         players: roles.filter((r) => r.player).length,
         rows: roles.map((r) => {
           const index = catalog.byId.get(r.nation)!.index
-          const now = held.value.get(index) ?? 0
+          const now = held.value[index]
           const capital = catalog.capitalOf.get(r.nation)
           const holder = capital === undefined ? null : catalog.list[owners.value[capital]]
           return {

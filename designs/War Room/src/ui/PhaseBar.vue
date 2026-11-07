@@ -5,7 +5,7 @@ import { addPhase, removePhase, renamePhase } from '../../shared/schema'
 import { useYArray, useYMap } from '../composables/useY'
 import { t } from '../i18n'
 import { confirmAction, toast } from '../state/feedback'
-import { session } from '../state/session'
+import { session, stepPhase } from '../state/session'
 import { usePlanner } from './context'
 
 const { plan, undo } = usePlanner()
@@ -16,13 +16,6 @@ const assignments = useYMap(plan.assignments)
 const editing = ref<string | null>(null)
 const draft = ref('')
 const editInput = ref<HTMLInputElement[]>([])
-
-function step(dir: 1 | -1) {
-  const list = phases.value
-  const i = session.activePhase ? list.findIndex((p) => p.id === session.activePhase) : -1
-  const next = i + dir
-  session.activePhase = next < 0 || next >= list.length ? null : list[next].id
-}
 
 async function add() {
   const id = addPhase(plan, t('phase.default', { n: phases.value.length + 1 }))
@@ -56,7 +49,7 @@ async function remove(id: string, name: string) {
   <div class="phase-bar chrome-surface" role="toolbar" :aria-label="t('phase.bar')">
     <span class="phase-bar-icon" :title="t('phase.bar')"><CalendarDays :size="16" /></span>
     <template v-if="phases.length">
-      <button class="chrome-btn" :title="`${t('phase.prev')} ([)`" :aria-label="t('phase.prev')" @click="step(-1)"><ChevronLeft :size="16" /></button>
+      <button class="chrome-btn" :title="`${t('phase.prev')} ([)`" :aria-label="t('phase.prev')" @click="stepPhase(phases, -1)"><ChevronLeft :size="16" /></button>
       <button class="phase-chip" :aria-pressed="session.activePhase === null" :title="t('phase.allTitle')" @click="session.activePhase = null">{{ t('phase.all') }}</button>
       <div v-for="(p, i) in phases" :key="p.id" class="phase-chip-wrap">
         <input
@@ -90,7 +83,7 @@ async function remove(id: string, name: string) {
           <X :size="12" />
         </button>
       </div>
-      <button class="chrome-btn" :title="`${t('phase.next')} (])`" :aria-label="t('phase.next')" @click="step(1)"><ChevronRight :size="16" /></button>
+      <button class="chrome-btn" :title="`${t('phase.next')} (])`" :aria-label="t('phase.next')" @click="stepPhase(phases, 1)"><ChevronRight :size="16" /></button>
       <span class="chrome-sep" />
     </template>
     <button class="phase-add" :title="t('phase.addTitle')" @click="add">

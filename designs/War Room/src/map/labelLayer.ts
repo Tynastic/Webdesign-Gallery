@@ -45,7 +45,9 @@ export class LabelLayer extends L.Layer {
   private showResources = true
   private glyphPaths = new Map<Resource, Path2D>()
   private nationNames: string[]
-  private territories: TerritoryLabel[]
+  private owners: Int16Array
+  /** Nation-name anchors for the current owners; null until needed (only drawn when zoomed far out). */
+  private territories: TerritoryLabel[] | null = null
   private widthCache = new Map<string, number>()
   private frame = 0
 
@@ -56,7 +58,7 @@ export class LabelLayer extends L.Layer {
     this.cities = this.byArea.filter((id) => data.provinces[id].city).sort((a, b) => data.provinces[b].city - data.provinces[a].city)
     this.marked = [...this.cities, ...this.byArea.filter((id) => !data.provinces[id].city && data.provinces[id].res)]
     this.nationNames = nations.list.map((n) => n.name.toUpperCase())
-    this.territories = territoryLabels(data, Int16Array.from(data.provinces, (p) => p.nation))
+    this.owners = Int16Array.from(data.provinces, (p) => p.nation)
   }
 
   /** Nation names in the current UI language. */
@@ -75,7 +77,8 @@ export class LabelLayer extends L.Layer {
 
   /** Re-place nation names after provinces changed hands. */
   setOwners(owners: Int16Array) {
-    this.territories = territoryLabels(this.data, owners)
+    this.owners = owners
+    this.territories = null
     if (this._map) this.schedule()
   }
 
@@ -138,6 +141,7 @@ export class LabelLayer extends L.Layer {
 
   private drawNations(map: L.Map, scale: number, size: L.Point, placed: Map<number, Rect[]>, shift: number) {
     const ctx = this.ctx
+    this.territories ??= territoryLabels(this.data, this.owners)
     for (const l of this.territories) {
       const span = Math.sqrt(l.area) * scale
       if (span < 40) break // sorted by area: everything after is smaller

@@ -63,6 +63,7 @@ export class PlannerMap {
   private shownMode = ''
   private readonly svgRenderers: L.Renderer[]
   private moveFrame = 0
+  private ownersFrame = 0
   /** While a pointer is down the view must not jump (it would break a drag that is starting). */
   private pointerDown = false
   /** A click whose pointerdown happened before the last tool drag ended belongs to that drag and is swallowed. */
@@ -284,7 +285,7 @@ export class PlannerMap {
     this.tooltip.remove()
     this.session.hoveredProvince = null
     this.tool.refresh?.()
-    if (this.tool instanceof PaintTool) this.tool.hint()
+    this.refreshHint()
   }
 
   /** Forward a keydown to the active tool; true if it consumed the key. */
@@ -316,12 +317,20 @@ export class PlannerMap {
     this.syncObjects()
   }
 
-  /** Provinces changed hands: recolour, redraw nation borders and labels, re-check planned conquests. */
+  /**
+   * Provinces changed hands: recolour, redraw nation borders and labels, re-check planned conquests.
+   * The owner array is updated at once (tools read it during a paint stroke); rebuilding borders,
+   * labels and markings is coalesced into one pass per frame, since a stroke changes one province per event.
+   */
   private syncOwners() {
     this.owners = this.nations.owners(this.plan.ownership.entries())
-    this.base.setOwners(this.owners)
-    this.labels.setOwners(this.owners)
-    this.syncMarks()
+    if (this.ownersFrame) return
+    this.ownersFrame = requestAnimationFrame(() => {
+      this.ownersFrame = 0
+      this.base.setOwners(this.owners)
+      this.labels.setOwners(this.owners)
+      this.syncMarks()
+    })
   }
 
   syncMarks() {
@@ -339,6 +348,11 @@ export class PlannerMap {
       })
     }
     this.marks.setMarks(marks)
+    this.refreshHint()
+  }
+
+  /** The paint tool's status line names its target nation and mode. */
+  refreshHint() {
     if (this.tool instanceof PaintTool) this.tool.hint()
   }
 
@@ -455,6 +469,8 @@ export class PlannerMap {
   }
 
   destroy() {
+    cancelAnimationFrame(this.ownersFrame)
+    cancelAnimationFrame(this.moveFrame)
     this.tool.deactivate?.()
     this.map.remove()
   }

@@ -1,7 +1,7 @@
 import type { Team } from '../../shared/lineup'
 import type { Role } from '../../shared/match'
 import type { FillMode } from '../state/session'
-import { mix } from './baseLayer'
+import { PAPER, mix } from './color'
 import type { NationCatalog } from './nations'
 
 /**
@@ -16,7 +16,6 @@ import type { NationCatalog } from './nations'
  * "Grey out AI nations" turns every nation without a player grey (with a hint of its
  * colour), so the nations that are played stand out.
  */
-export const PAPER = '#e9e1cc'
 const AI_GREY = '#d6d2c6'
 export const TEAM_BASE: Record<Team, string> = { axis: '#b4573f', allies: '#3e72ac' }
 

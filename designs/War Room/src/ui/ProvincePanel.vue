@@ -13,14 +13,12 @@ import NationSelect from './NationSelect.vue'
 import ResourceIcon from './ResourceIcon.vue'
 
 const props = defineProps<{ id: number }>()
-const { data, catalog, plan, undo, planner } = usePlanner()
+const { data, catalog, plan, undo, planner, owners } = usePlanner()
 const { match, role, label, playersTotal } = useMatch()
 const phases = useYArray(plan.phases)
 const assignments = useYMap(plan.assignments)
-const ownership = useYMap(plan.ownership)
 
 const province = computed(() => data.provinces[props.id])
-const owners = computed(() => catalog.owners(ownership.value.entries()))
 const start = computed(() => catalog.startOf(props.id))
 const owner = computed(() => catalog.list[owners.value[props.id]])
 const conquered = computed(() => owner.value.id !== start.value.id)

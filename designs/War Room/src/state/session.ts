@@ -144,6 +144,14 @@ watch(
   },
 )
 
+/** Step the active phase one day back or forward; past either end it goes to "All" (null). */
+export function stepPhase(phases: { id: string }[], dir: 1 | -1) {
+  if (!phases.length) return
+  const i = session.activePhase ? phases.findIndex((p) => p.id === session.activePhase) : -1
+  const next = i + dir
+  session.activePhase = next < 0 || next >= phases.length ? null : phases[next].id
+}
+
 /** Which player I am is remembered per room (and per browser). */
 export function loadPlayer(room: string): string | null {
   try {
